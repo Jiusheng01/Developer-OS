@@ -1,0 +1,35 @@
+# Local agent/runtime metadata
+.agents/
+.codex/
+.trellis/
+AGENTS.md
+%SystemDrive%/
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Next.js build output
+.next/
+frontend/.next/
+out/
+frontend/out/
+
+# Environment files
+.env
+.env.*
+frontend/.env
+frontend/.env.*
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f7f7f4;
+  --foreground: #1c1c18;
+  --card: #ffffff;
+  --card-foreground: #1c1c18;
+  --popover: #ffffff;
+  --popover-foreground: #1c1c18;
+  --primary: #146c5f;
+  --primary-foreground: #f6fffb;
+  --secondary: #ece8df;
+  --secondary-foreground: #292722;
+  --muted: #e9e6de;
+  --muted-foreground: #68635a;
+  --accent: #b84a38;
+  --accent-foreground: #fff8f5;
+  --destructive: #b42318;
+  --destructive-foreground: #fff8f8;
+  --border: #dad4c8;
+  --input: #d6d0c5;
+  --ring: #146c5f;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: #151513;
+  --foreground: #f2efe7;
+  --card: #1d1d1a;
+  --card-foreground: #f2efe7;
+  --popover: #1d1d1a;
+  --popover-foreground: #f2efe7;
+  --primary: #4ab9a4;
+  --primary-foreground: #071411;
+  --secondary: #2a2823;
+  --secondary-foreground: #eee9dd;
+  --muted: #282722;
+  --muted-foreground: #aaa394;
+  --accent: #de735f;
+  --accent-foreground: #180805;
+  --destructive: #ff786a;
+  --destructive-foreground: #1e0503;
+  --border: #36332d;
+  --input: #3a372f;
+  --ring: #4ab9a4;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  min-width: 320px;
+  background: var(--background);
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary) 24%, transparent);
+}
