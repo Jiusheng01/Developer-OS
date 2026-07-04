@@ -39,13 +39,13 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
     if (ok) setPasscode("");
   }
 
-  function handleGenerateExport() {
-    setExportText(store.exportDashboardData());
+  async function handleGenerateExport() {
+    setExportText(await store.exportDashboardData());
     setDataMessage(t.exportReady);
   }
 
   async function handleCopyExport() {
-    const text = exportText || store.exportDashboardData();
+    const text = exportText || (await store.exportDashboardData());
     setExportText(text);
 
     if (!("clipboard" in navigator)) {
@@ -61,9 +61,9 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
     }
   }
 
-  function handleImport(event: FormEvent<HTMLFormElement>) {
+  async function handleImport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const result = store.importDashboardData(importText);
+    const result = await store.importDashboardData(importText);
 
     if (!result.ok) {
       setDataMessage(importErrorMessages[result.error]);
@@ -142,7 +142,7 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
           </CardHeader>
           <CardContent className="grid gap-3">
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={handleGenerateExport}>
+              <Button type="button" onClick={() => void handleGenerateExport()}>
                 <Download className="h-4 w-4" />
                 {t.generateExport}
               </Button>

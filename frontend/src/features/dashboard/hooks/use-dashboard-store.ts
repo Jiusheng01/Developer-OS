@@ -1,13 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { stateWithSnapshot } from "@/features/dashboard/data/dashboard-data-provider";
 import {
   loadDashboardState,
-  parseDashboardImport,
   resetDashboardState,
   saveDashboardState,
-  serializeDashboardExport,
 } from "@/features/dashboard/data/local-storage-dashboard-repository";
+import {
+  getDashboardDataProvider,
+  getDashboardDataProviderMode,
+} from "@/features/dashboard/data/provider-config";
 import type {
   DashboardState,
   DashboardTab,
@@ -21,13 +24,6 @@ import type {
   TodoPatch,
 } from "@/features/dashboard/types";
 import { applyTheme, type ThemePreference } from "@/lib/theme/theme-provider";
-
-function makeId(prefix: string) {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return `${prefix}-${crypto.randomUUID()}`;
-  }
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
 
 function hashPasscode(value: string) {
   let hash = 5381;
@@ -67,21 +63,78 @@ function hasPatchKey(patch: object, key: PropertyKey) {
   return Object.prototype.hasOwnProperty.call(patch, key);
 }
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Dashboard data provider failed";
+}
+
 export function useDashboardStore() {
-  const hydrated = useSyncExternalStore(() => () => undefined, () => true, () => false);
+  const browserHydrated = useSyncExternalStore(() => () => undefined, () => true, () => false);
+  const provider = useMemo(() => getDashboardDataProvider(), []);
+  const providerMode = useMemo(() => getDashboardDataProviderMode(), []);
   const [state, setState] = useState<DashboardState>(() => loadDashboardState());
+  const [dataHydrated, setDataHydrated] = useState(false);
+  const [dataError, setDataError] = useState<string | undefined>();
+
+  const persistLocalState = useCallback((next: DashboardState) => {
+    saveDashboardState(next);
+    applyTheme(next.preferences.theme);
+  }, []);
 
   useEffect(() => {
     applyTheme(state.preferences.theme);
   }, [state.preferences.theme]);
 
-  const commit = useCallback((update: (current: DashboardState) => DashboardState) => {
+  useEffect(() => {
+    if (!browserHydrated) return;
+    let cancelled = false;
+
+    async function loadProviderData() {
+      setDataHydrated(false);
+      setDataError(undefined);
+      try {
+        const snapshot = await provider.loadData();
+        if (cancelled) return;
+        setState((current) => {
+          const next = stateWithSnapshot(current, snapshot);
+          persistLocalState(next);
+          return next;
+        });
+      } catch (error) {
+        if (!cancelled) setDataError(getErrorMessage(error));
+      } finally {
+        if (!cancelled) setDataHydrated(true);
+      }
+    }
+
+    void loadProviderData();
+    return () => {
+      cancelled = true;
+    };
+  }, [browserHydrated, persistLocalState, provider]);
+
+  const commitLocal = useCallback((update: (current: DashboardState) => DashboardState) => {
     setState((current) => {
       const next = update(current);
-      saveDashboardState(next);
-      applyTheme(next.preferences.theme);
+      persistLocalState(next);
       return next;
     });
+  }, [persistLocalState]);
+
+  const commitBusiness = useCallback((update: (current: DashboardState) => DashboardState) => {
+    setState((current) => {
+      const next = update(current);
+      persistLocalState(next);
+      return next;
+    });
+  }, [persistLocalState]);
+
+  const runProviderAction = useCallback(async (action: () => Promise<void>) => {
+    setDataError(undefined);
+    try {
+      await action();
+    } catch (error) {
+      setDataError(getErrorMessage(error));
+    }
   }, []);
 
   const hasPasscode = Boolean(state.access.passcodeHash);
@@ -90,7 +143,7 @@ export function useDashboardStore() {
   const createPasscode = useCallback((passcode: string) => {
     const trimmed = passcode.trim();
     if (trimmed.length < 4) return false;
-    commit((current) => ({
+    commitLocal((current) => ({
       ...current,
       access: {
         passcodeHash: hashPasscode(trimmed),
@@ -98,7 +151,7 @@ export function useDashboardStore() {
       },
     }));
     return true;
-  }, [commit]);
+  }, [commitLocal]);
 
   const unlock = useCallback((passcode: string) => {
     const trimmed = passcode.trim();
@@ -112,230 +165,237 @@ export function useDashboardStore() {
   }, []);
 
   const setActiveTab = useCallback((tab: DashboardTab) => {
-    commit((current) => ({ ...current, preferences: { ...current.preferences, activeTab: tab } }));
-  }, [commit]);
+    commitLocal((current) => ({ ...current, preferences: { ...current.preferences, activeTab: tab } }));
+  }, [commitLocal]);
 
   const setTheme = useCallback((theme: ThemePreference) => {
-    commit((current) => ({ ...current, preferences: { ...current.preferences, theme } }));
-  }, [commit]);
+    commitLocal((current) => ({ ...current, preferences: { ...current.preferences, theme } }));
+  }, [commitLocal]);
 
   const addTodo = useCallback((input: TodoInput) => {
     const title = input.title.trim();
     if (!title) return;
-    const now = new Date().toISOString();
-    commit((current) => ({
-      ...current,
-      todos: [
-        {
-          id: makeId("todo"),
-          title,
-          done: false,
-          priority: input.priority,
-          tags: cleanTags(input.tags),
-          dueDate: cleanOptionalString(input.dueDate),
-          createdAt: now,
-          updatedAt: now,
-        },
-        ...current.todos,
-      ],
-    }));
-  }, [commit]);
+    const payload: TodoInput = {
+      title,
+      priority: input.priority,
+      tags: cleanTags(input.tags),
+      dueDate: cleanOptionalString(input.dueDate),
+    };
+    void runProviderAction(async () => {
+      const todo = await provider.todos.create(payload);
+      commitBusiness((current) => ({ ...current, todos: [todo, ...current.todos.filter((item) => item.id !== todo.id)] }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
 
   const updateTodo = useCallback((id: string, patch: TodoPatch) => {
-    commit((current) => ({
-      ...current,
-      todos: current.todos.map((todo) => {
-        if (todo.id !== id) return todo;
-        const nextTitle = patch.title === undefined ? todo.title : patch.title.trim();
-        if (!nextTitle) return todo;
-        return {
-          ...todo,
-          title: nextTitle,
-          done: patch.done ?? todo.done,
-          priority: patch.priority ?? todo.priority,
-          tags: patch.tags === undefined ? todo.tags : cleanTags(patch.tags),
-          dueDate: hasPatchKey(patch, "dueDate") ? cleanOptionalString(patch.dueDate) : todo.dueDate,
-          updatedAt: new Date().toISOString(),
-        };
-      }),
-    }));
-  }, [commit]);
+    const payload: TodoPatch = {};
+    if (patch.title !== undefined) {
+      const title = patch.title.trim();
+      if (!title) return;
+      payload.title = title;
+    }
+    if (patch.done !== undefined) payload.done = patch.done;
+    if (patch.priority !== undefined) payload.priority = patch.priority;
+    if (patch.tags !== undefined) payload.tags = cleanTags(patch.tags);
+    if (hasPatchKey(patch, "dueDate")) payload.dueDate = cleanOptionalString(patch.dueDate);
+
+    void runProviderAction(async () => {
+      const todo = await provider.todos.update(id, payload);
+      commitBusiness((current) => ({
+        ...current,
+        todos: current.todos.map((item) => (item.id === id ? todo : item)),
+      }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
 
   const toggleTodo = useCallback((id: string) => {
-    commit((current) => ({
-      ...current,
-      todos: current.todos.map((todo) =>
-        todo.id === id ? { ...todo, done: !todo.done, updatedAt: new Date().toISOString() } : todo,
-      ),
-    }));
-  }, [commit]);
+    const todo = state.todos.find((item) => item.id === id);
+    if (!todo) return;
+    updateTodo(id, { done: !todo.done });
+  }, [state.todos, updateTodo]);
 
   const deleteTodo = useCallback((id: string) => {
-    commit((current) => ({ ...current, todos: current.todos.filter((todo) => todo.id !== id) }));
-  }, [commit]);
+    void runProviderAction(async () => {
+      await provider.todos.delete(id);
+      commitBusiness((current) => ({ ...current, todos: current.todos.filter((todo) => todo.id !== id) }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
 
   const addLearningItem = useCallback((input: LearningInput) => {
     const title = input.title.trim();
     if (!title) return;
-    commit((current) => ({
-      ...current,
-      learningItems: [
-        {
-          id: makeId("learning"),
-          title,
-          area: cleanString(input.area, "General"),
-          status: input.status,
-          progress: clampProgress(input.progress),
-          notes: input.notes,
-          tags: cleanTags(input.tags),
-          updatedAt: new Date().toISOString(),
-        },
-        ...current.learningItems,
-      ],
-    }));
-  }, [commit]);
+    const payload: LearningInput = {
+      title,
+      area: cleanString(input.area, "General"),
+      status: input.status,
+      progress: clampProgress(input.progress),
+      notes: input.notes,
+      tags: cleanTags(input.tags),
+    };
+    void runProviderAction(async () => {
+      const item = await provider.learning.create(payload);
+      commitBusiness((current) => ({
+        ...current,
+        learningItems: [item, ...current.learningItems.filter((existing) => existing.id !== item.id)],
+      }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
 
   const updateLearningItem = useCallback((id: string, patch: LearningPatch) => {
-    commit((current) => ({
-      ...current,
-      learningItems: current.learningItems.map((item) => {
-        if (item.id !== id) return item;
-        const nextTitle = patch.title === undefined ? item.title : patch.title.trim();
-        if (!nextTitle) return item;
-        return {
-          ...item,
-          title: nextTitle,
-          area: patch.area === undefined ? item.area : cleanString(patch.area, "General"),
-          status: patch.status ?? item.status,
-          progress: patch.progress === undefined ? item.progress : clampProgress(patch.progress),
-          notes: patch.notes ?? item.notes,
-          tags: patch.tags === undefined ? item.tags : cleanTags(patch.tags),
-          updatedAt: new Date().toISOString(),
-        };
-      }),
-    }));
-  }, [commit]);
+    const payload: LearningPatch = {};
+    if (patch.title !== undefined) {
+      const title = patch.title.trim();
+      if (!title) return;
+      payload.title = title;
+    }
+    if (patch.area !== undefined) payload.area = cleanString(patch.area, "General");
+    if (patch.status !== undefined) payload.status = patch.status;
+    if (patch.progress !== undefined) payload.progress = clampProgress(patch.progress);
+    if (patch.notes !== undefined) payload.notes = patch.notes;
+    if (patch.tags !== undefined) payload.tags = cleanTags(patch.tags);
+
+    void runProviderAction(async () => {
+      const item = await provider.learning.update(id, payload);
+      commitBusiness((current) => ({
+        ...current,
+        learningItems: current.learningItems.map((existing) => (existing.id === id ? item : existing)),
+      }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
 
   const addNote = useCallback((input: NoteInput) => {
     const title = input.title.trim();
     if (!title) return;
-    commit((current) => ({
-      ...current,
-      notes: [
-        {
-          id: makeId("note"),
-          title,
-          body: input.body,
-          category: cleanString(input.category, "General"),
-          tags: cleanTags(input.tags),
-          updatedAt: new Date().toISOString(),
-        },
-        ...current.notes,
-      ],
-    }));
-  }, [commit]);
+    const payload: NoteInput = {
+      title,
+      body: input.body,
+      category: cleanString(input.category, "General"),
+      tags: cleanTags(input.tags),
+    };
+    void runProviderAction(async () => {
+      const note = await provider.notes.create(payload);
+      commitBusiness((current) => ({ ...current, notes: [note, ...current.notes.filter((item) => item.id !== note.id)] }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
 
   const updateNote = useCallback((id: string, patch: NotePatch) => {
-    commit((current) => ({
-      ...current,
-      notes: current.notes.map((note) => {
-        if (note.id !== id) return note;
-        const nextTitle = patch.title === undefined ? note.title : patch.title.trim();
-        if (!nextTitle) return note;
-        return {
-          ...note,
-          title: nextTitle,
-          body: patch.body ?? note.body,
-          category: patch.category === undefined ? note.category : cleanString(patch.category, "General"),
-          tags: patch.tags === undefined ? note.tags : cleanTags(patch.tags),
-          updatedAt: new Date().toISOString(),
-        };
-      }),
-    }));
-  }, [commit]);
+    const payload: NotePatch = {};
+    if (patch.title !== undefined) {
+      const title = patch.title.trim();
+      if (!title) return;
+      payload.title = title;
+    }
+    if (patch.body !== undefined) payload.body = patch.body;
+    if (patch.category !== undefined) payload.category = cleanString(patch.category, "General");
+    if (patch.tags !== undefined) payload.tags = cleanTags(patch.tags);
+
+    void runProviderAction(async () => {
+      const note = await provider.notes.update(id, payload);
+      commitBusiness((current) => ({
+        ...current,
+        notes: current.notes.map((existing) => (existing.id === id ? note : existing)),
+      }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
 
   const addGoal = useCallback((input: GoalInput) => {
     const title = input.title.trim();
     if (!title) return;
-    commit((current) => ({
-      ...current,
-      goals: [
-        {
-          id: makeId("goal"),
-          title,
-          progress: clampProgress(input.progress),
-          status: input.status,
-          targetYear: cleanOptionalString(input.targetYear),
-          tasks: [],
-        },
-        ...current.goals,
-      ],
-    }));
-  }, [commit]);
+    const payload: GoalInput = {
+      title,
+      progress: clampProgress(input.progress),
+      status: input.status,
+      targetYear: cleanOptionalString(input.targetYear),
+    };
+    void runProviderAction(async () => {
+      const goal = await provider.goals.create(payload);
+      commitBusiness((current) => ({ ...current, goals: [goal, ...current.goals.filter((item) => item.id !== goal.id)] }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
 
   const updateGoal = useCallback((id: string, patch: GoalPatch) => {
-    commit((current) => ({
-      ...current,
-      goals: current.goals.map((goal) => {
-        if (goal.id !== id) return goal;
-        const nextTitle = patch.title === undefined ? goal.title : patch.title.trim();
-        if (!nextTitle) return goal;
-        return {
-          ...goal,
-          title: nextTitle,
-          progress: patch.progress === undefined ? goal.progress : clampProgress(patch.progress),
-          status: patch.status ?? goal.status,
-          targetYear: hasPatchKey(patch, "targetYear") ? cleanOptionalString(patch.targetYear) : goal.targetYear,
-        };
-      }),
-    }));
-  }, [commit]);
+    const payload: GoalPatch = {};
+    if (patch.title !== undefined) {
+      const title = patch.title.trim();
+      if (!title) return;
+      payload.title = title;
+    }
+    if (patch.progress !== undefined) payload.progress = clampProgress(patch.progress);
+    if (patch.status !== undefined) payload.status = patch.status;
+    if (hasPatchKey(patch, "targetYear")) payload.targetYear = cleanOptionalString(patch.targetYear);
+
+    void runProviderAction(async () => {
+      const goal = await provider.goals.update(id, payload);
+      commitBusiness((current) => ({
+        ...current,
+        goals: current.goals.map((existing) => (existing.id === id ? goal : existing)),
+      }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
 
   const addGoalTask = useCallback((goalId: string, title: string) => {
     const trimmed = title.trim();
     if (!trimmed) return;
-    commit((current) => ({
-      ...current,
-      goals: current.goals.map((goal) =>
-        goal.id === goalId
-          ? { ...goal, tasks: [{ id: makeId("goal-task"), title: trimmed, done: false }, ...goal.tasks] }
-          : goal,
-      ),
-    }));
-  }, [commit]);
+    void runProviderAction(async () => {
+      const task = await provider.goals.createTask(goalId, trimmed);
+      commitBusiness((current) => ({
+        ...current,
+        goals: current.goals.map((goal) =>
+          goal.id === goalId ? { ...goal, tasks: [task, ...goal.tasks.filter((item) => item.id !== task.id)] } : goal,
+        ),
+      }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
 
   const toggleGoalTask = useCallback((goalId: string, taskId: string) => {
-    commit((current) => ({
-      ...current,
-      goals: current.goals.map((goal) =>
-        goal.id === goalId
-          ? { ...goal, tasks: goal.tasks.map((task) => (task.id === taskId ? { ...task, done: !task.done } : task)) }
-          : goal,
-      ),
-    }));
-  }, [commit]);
+    const goal = state.goals.find((item) => item.id === goalId);
+    const task = goal?.tasks.find((item) => item.id === taskId);
+    if (!task) return;
+    void runProviderAction(async () => {
+      const updatedTask = await provider.goals.updateTask(goalId, taskId, { done: !task.done });
+      commitBusiness((current) => ({
+        ...current,
+        goals: current.goals.map((currentGoal) =>
+          currentGoal.id === goalId
+            ? {
+                ...currentGoal,
+                tasks: currentGoal.tasks.map((currentTask) =>
+                  currentTask.id === taskId ? updatedTask : currentTask,
+                ),
+              }
+            : currentGoal,
+        ),
+      }));
+    });
+  }, [commitBusiness, provider, runProviderAction, state.goals]);
 
   const deleteGoalTask = useCallback((goalId: string, taskId: string) => {
-    commit((current) => ({
-      ...current,
-      goals: current.goals.map((goal) =>
-        goal.id === goalId ? { ...goal, tasks: goal.tasks.filter((task) => task.id !== taskId) } : goal,
-      ),
-    }));
-  }, [commit]);
+    void runProviderAction(async () => {
+      await provider.goals.deleteTask(goalId, taskId);
+      commitBusiness((current) => ({
+        ...current,
+        goals: current.goals.map((goal) =>
+          goal.id === goalId ? { ...goal, tasks: goal.tasks.filter((task) => task.id !== taskId) } : goal,
+        ),
+      }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
 
   const updatePasscode = useCallback((passcode: string) => createPasscode(passcode), [createPasscode]);
 
   const clearData = useCallback(() => {
-    const reset = resetDashboardState();
-    setState(reset);
-    applyTheme(reset.preferences.theme);
-  }, []);
+    void runProviderAction(async () => {
+      const snapshot = await provider.resetData();
+      const reset = stateWithSnapshot(resetDashboardState(), snapshot);
+      setState(reset);
+      applyTheme(reset.preferences.theme);
+    });
+  }, [provider, runProviderAction]);
 
-  const exportDashboardData = useCallback(() => serializeDashboardExport(state), [state]);
+  const exportDashboardData = useCallback(async () => provider.exportData(state), [provider, state]);
 
-  const importDashboardData = useCallback((raw: string) => {
-    const result = parseDashboardImport(raw);
+  const importDashboardData = useCallback(async (raw: string) => {
+    const result = await provider.importData(raw);
     if (!result.ok) return result;
 
     const nextState: DashboardState = {
@@ -350,7 +410,7 @@ export function useDashboardStore() {
     setState(nextState);
     applyTheme(nextState.preferences.theme);
     return { ok: true, state: nextState } as const;
-  }, []);
+  }, [provider]);
 
   const summary = useMemo(() => {
     const openTodos = state.todos.filter((todo) => !todo.done).length;
@@ -366,7 +426,9 @@ export function useDashboardStore() {
 
   return {
     state,
-    hydrated,
+    hydrated: browserHydrated && dataHydrated,
+    dataError,
+    providerMode,
     hasPasscode,
     activeTab,
     summary,

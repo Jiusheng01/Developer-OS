@@ -33,3 +33,23 @@ pnpm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+# Python / backend
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+backend/.venv/
+backend/venv/
+backend/.env
+backend/.env.*
+!backend/.env.example
+*.db
+*.db-shm
+*.db-wal
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+*.egg-info/
