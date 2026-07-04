@@ -64,6 +64,68 @@ Health check:
 GET http://127.0.0.1:8000/api/v1/health
 ```
 
+## V2.1 Local/API Smoke Runbook
+
+Use this checklist when changing Dashboard data access or validating a fresh setup.
+
+### LocalStorage mode
+
+1. Ensure `frontend/.env.local` is missing or contains:
+
+   ```text
+   NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=local
+   NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
+   ```
+
+2. Start the frontend:
+
+   ```powershell
+   npm run dev --prefix frontend
+   ```
+
+3. Open `http://127.0.0.1:3000/dashboard`.
+4. Create or edit one Todo, Learning item, Note, and Goal.
+5. Refresh the browser and verify the records remain available from browser storage.
+
+### API mode
+
+1. Start the backend from the repository root:
+
+   ```powershell
+   backend\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
+   ```
+
+2. Verify health:
+
+   ```powershell
+   Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
+   ```
+
+3. Set `frontend/.env.local`:
+
+   ```text
+   NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=api
+   NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
+   ```
+
+4. Restart the frontend dev server.
+5. In `/dashboard`, create, update, delete, and refresh-check Todo, Learning, Notes, and Goals.
+
+### API failure mode
+
+1. Keep the frontend configured with `NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=api`.
+2. Stop the backend.
+3. Open `/dashboard`.
+4. Verify the Dashboard remains usable and shows a non-blocking data error instead of a blank screen.
+
+### SQLite reset
+
+The default local API database is `backend/developer_os.db`. To reset local API data when the backend is stopped:
+
+```powershell
+Remove-Item -LiteralPath backend/developer_os.db -Force
+```
+
 ## Quality Checks
 
 ```powershell
