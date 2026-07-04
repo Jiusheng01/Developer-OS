@@ -64,7 +64,57 @@ Health check:
 GET http://127.0.0.1:8000/api/v1/health
 ```
 
-## V2.1 Local/API Smoke Runbook
+## Recommended Development Scripts
+
+Run these commands from the repository root. They are Windows PowerShell scripts and do not write `frontend/.env.local`; provider mode is set only for the dev server process they start.
+
+Start the FastAPI backend:
+
+```powershell
+.\scripts\dev-backend.ps1
+```
+
+Start the frontend in localStorage mode:
+
+```powershell
+.\scripts\dev-frontend-local.ps1
+```
+
+Start the frontend in API mode:
+
+```powershell
+.\scripts\dev-frontend-api.ps1
+```
+
+Check backend health:
+
+```powershell
+.\scripts\smoke-api-health.ps1
+```
+
+Reset the local SQLite API database. This is intentionally explicit and destructive:
+
+```powershell
+.\scripts\reset-api-sqlite.ps1
+```
+
+Use `-Force` only when you already know you want to delete `backend/developer_os.db`:
+
+```powershell
+.\scripts\reset-api-sqlite.ps1 -Force
+```
+
+If your shell blocks local scripts, run them with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev-backend.ps1
+```
+
+When switching between local and API provider mode, stop and restart the frontend dev script. Next.js reads `NEXT_PUBLIC_*` variables when the dev server starts.
+
+If a frontend script reports that another Next.js dev server may already be running, stop the existing frontend server before switching modes. If no Node dev server is running, remove the stale `frontend\.next\dev\lock` file and start the script again.
+
+## V2 Local/API Smoke Runbook
 
 Use this checklist when changing Dashboard data access or validating a fresh setup.
 
@@ -80,7 +130,7 @@ Use this checklist when changing Dashboard data access or validating a fresh set
 2. Start the frontend:
 
    ```powershell
-   npm run dev --prefix frontend
+   .\scripts\dev-frontend-local.ps1
    ```
 
 3. Open `http://127.0.0.1:3000/dashboard`.
@@ -92,24 +142,22 @@ Use this checklist when changing Dashboard data access or validating a fresh set
 1. Start the backend from the repository root:
 
    ```powershell
-   backend\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
+   .\scripts\dev-backend.ps1
    ```
 
 2. Verify health:
 
    ```powershell
-   Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
+   .\scripts\smoke-api-health.ps1
    ```
 
-3. Set `frontend/.env.local`:
+3. Start or restart the frontend in API mode:
 
-   ```text
-   NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=api
-   NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
+   ```powershell
+   .\scripts\dev-frontend-api.ps1
    ```
 
-4. Restart the frontend dev server.
-5. In `/dashboard`, create, update, delete, and refresh-check Todo, Learning, Notes, and Goals.
+4. In `/dashboard`, create, update, delete, and refresh-check Todo, Learning, Notes, and Goals.
 
 ### API failure mode
 
@@ -123,7 +171,7 @@ Use this checklist when changing Dashboard data access or validating a fresh set
 The default local API database is `backend/developer_os.db`. To reset local API data when the backend is stopped:
 
 ```powershell
-Remove-Item -LiteralPath backend/developer_os.db -Force
+.\scripts\reset-api-sqlite.ps1
 ```
 
 ## Quality Checks

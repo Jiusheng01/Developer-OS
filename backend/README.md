@@ -28,13 +28,13 @@ Copy-Item .env.example .env
 From the repository root:
 
 ```powershell
-uvicorn app.main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
+.\scripts\dev-backend.ps1
 ```
 
 Health check:
 
-```text
-GET http://127.0.0.1:8000/api/v1/health
+```powershell
+.\scripts\smoke-api-health.ps1
 ```
 
 The default SQLite database path is:
@@ -46,7 +46,7 @@ backend/developer_os.db
 To reset local API data while the backend is stopped:
 
 ```powershell
-Remove-Item -LiteralPath backend/developer_os.db -Force
+.\scripts\reset-api-sqlite.ps1
 ```
 
 ## Frontend API Mode
