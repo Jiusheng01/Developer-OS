@@ -2,12 +2,13 @@
 
 import { FormEvent, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { CalendarDays, Pencil, Save, Tags, Trash2, X } from "lucide-react";
+import { CalendarDays, CheckSquare, Pencil, Save, Tags, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DashboardEmptyState } from "@/features/dashboard/components/dashboard-empty-state";
 import { DashboardListItemMotion } from "@/features/dashboard/components/dashboard-motion";
+import { DashboardSection } from "@/features/dashboard/components/dashboard-section";
 import type { DashboardStore } from "@/features/dashboard/hooks/use-dashboard-store";
 import type { TodoItem, TodoPriority } from "@/features/dashboard/types";
 import { formatTags, parseTagInput } from "@/features/dashboard/utils/tags";
@@ -79,30 +80,25 @@ export function TodoTab({ store }: { store: DashboardStore }) {
 
   return (
     <div className="grid gap-5">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.addTask}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_9rem_10rem_9rem_auto]" onSubmit={handleSubmit}>
-            <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t.placeholder} aria-label={t.title} />
-            <select
-              value={priority}
-              onChange={(event) => setPriority(readPriority(event.target.value))}
-              aria-label={t.priority}
-              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {priorityOptions.map((option) => (
-                <option key={option} value={option}>{t.priorityLabels[option]}</option>
-              ))}
-            </select>
-            <Input value={tags} onChange={(event) => setTags(event.target.value)} placeholder={t.tagsPlaceholder} aria-label={t.tags} />
-            <Input value={dueDate} onChange={(event) => setDueDate(event.target.value)} type="date" aria-label={t.dueDate} />
-            <Button type="submit">{t.add}</Button>
-          </form>
-        </CardContent>
-      </Card>
-      <div className="grid gap-3">
+      <DashboardSection title={t.addTask} icon={CheckSquare}>
+        <form className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_9rem_10rem_9rem_auto]" onSubmit={handleSubmit}>
+          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t.placeholder} aria-label={t.title} />
+          <select
+            value={priority}
+            onChange={(event) => setPriority(readPriority(event.target.value))}
+            aria-label={t.priority}
+            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {priorityOptions.map((option) => (
+              <option key={option} value={option}>{t.priorityLabels[option]}</option>
+            ))}
+          </select>
+          <Input value={tags} onChange={(event) => setTags(event.target.value)} placeholder={t.tagsPlaceholder} aria-label={t.tags} />
+          <Input value={dueDate} onChange={(event) => setDueDate(event.target.value)} type="date" aria-label={t.dueDate} />
+          <Button type="submit">{t.add}</Button>
+        </form>
+      </DashboardSection>
+      <DashboardSection title={t.tasks} description={t.tasksDescription} icon={CheckSquare} contentClassName="grid gap-3">
         <AnimatePresence initial={false}>
           {store.state.todos.map((todo) => {
             const isEditing = editingId === todo.id;
@@ -110,78 +106,77 @@ export function TodoTab({ store }: { store: DashboardStore }) {
 
             return (
               <DashboardListItemMotion key={todo.id}>
-                <Card>
-                  <CardContent className="p-4">
-                    {isEditing ? (
-                      <form className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_9rem_10rem_9rem_auto_auto]" onSubmit={(event) => handleEditSubmit(event, todo.id)}>
-                        <Input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} aria-label={t.title} />
-                        <select
-                          value={editPriority}
-                          onChange={(event) => setEditPriority(readPriority(event.target.value))}
-                          aria-label={t.priority}
-                          className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          {priorityOptions.map((option) => (
-                            <option key={option} value={option}>{t.priorityLabels[option]}</option>
-                          ))}
-                        </select>
-                        <Input value={editTags} onChange={(event) => setEditTags(event.target.value)} placeholder={t.tagsPlaceholder} aria-label={t.tags} />
-                        <Input value={editDueDate} onChange={(event) => setEditDueDate(event.target.value)} type="date" aria-label={t.dueDate} />
-                        <Button type="submit" size="sm">
-                          <Save className="h-4 w-4" />
-                          {t.save}
-                        </Button>
-                        <Button type="button" size="sm" variant="outline" onClick={cancelEditing}>
-                          <X className="h-4 w-4" />
-                          {t.cancel}
-                        </Button>
-                      </form>
-                    ) : (
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="flex min-w-0 gap-3">
-                          <input
-                            aria-label={`${t.toggle} ${todo.title}`}
-                            type="checkbox"
-                            checked={todo.done}
-                            onChange={() => store.toggleTodo(todo.id)}
-                            className="mt-1 h-5 w-5 shrink-0 accent-primary"
-                          />
-                          <div className="min-w-0">
-                            <p className={cn("text-sm font-medium", todo.done && "text-muted-foreground line-through")}>{todo.title}</p>
-                            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                              <Badge variant={todo.priority === "high" ? "default" : "secondary"}>{t.priorityLabels[todo.priority]}</Badge>
-                              {dueDateLabel ? (
-                                <span className="inline-flex items-center gap-1 rounded-md border px-2 py-1">
-                                  <CalendarDays className="h-3.5 w-3.5" />
-                                  {t.due}: {dueDateLabel}
-                                </span>
-                              ) : null}
-                              {todo.tags.map((tag) => (
-                                <span key={tag} className="inline-flex items-center gap-1 rounded-md border px-2 py-1">
-                                  <Tags className="h-3.5 w-3.5" />
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
+                <div className="rounded-md border bg-background/70 p-4">
+                  {isEditing ? (
+                    <form className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_9rem_10rem_9rem_auto_auto]" onSubmit={(event) => handleEditSubmit(event, todo.id)}>
+                      <Input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} aria-label={t.title} />
+                      <select
+                        value={editPriority}
+                        onChange={(event) => setEditPriority(readPriority(event.target.value))}
+                        aria-label={t.priority}
+                        className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {priorityOptions.map((option) => (
+                          <option key={option} value={option}>{t.priorityLabels[option]}</option>
+                        ))}
+                      </select>
+                      <Input value={editTags} onChange={(event) => setEditTags(event.target.value)} placeholder={t.tagsPlaceholder} aria-label={t.tags} />
+                      <Input value={editDueDate} onChange={(event) => setEditDueDate(event.target.value)} type="date" aria-label={t.dueDate} />
+                      <Button type="submit" size="sm">
+                        <Save className="h-4 w-4" />
+                        {t.save}
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" onClick={cancelEditing}>
+                        <X className="h-4 w-4" />
+                        {t.cancel}
+                      </Button>
+                    </form>
+                  ) : (
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="flex min-w-0 gap-3">
+                        <input
+                          aria-label={`${t.toggle} ${todo.title}`}
+                          type="checkbox"
+                          checked={todo.done}
+                          onChange={() => store.toggleTodo(todo.id)}
+                          className="mt-1 h-5 w-5 shrink-0 accent-primary"
+                        />
+                        <div className="min-w-0">
+                          <p className={cn("text-sm font-medium", todo.done && "text-muted-foreground line-through")}>{todo.title}</p>
+                          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant={todo.priority === "high" ? "default" : "secondary"}>{t.priorityLabels[todo.priority]}</Badge>
+                            {dueDateLabel ? (
+                              <span className="inline-flex items-center gap-1 rounded-md border px-2 py-1">
+                                <CalendarDays className="h-3.5 w-3.5" />
+                                {t.due}: {dueDateLabel}
+                              </span>
+                            ) : null}
+                            {todo.tags.map((tag) => (
+                              <span key={tag} className="inline-flex items-center gap-1 rounded-md border px-2 py-1">
+                                <Tags className="h-3.5 w-3.5" />
+                                {tag}
+                              </span>
+                            ))}
                           </div>
                         </div>
-                        <div className="flex shrink-0 gap-1 self-end lg:self-start">
-                          <Button type="button" variant="ghost" size="icon" onClick={() => startEditing(todo)} aria-label={`${t.edit} ${todo.title}`}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => store.deleteTodo(todo.id)} aria-label={`${t.delete} ${todo.title}`}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                      <div className="flex shrink-0 gap-1 self-end lg:self-start">
+                        <Button type="button" variant="ghost" size="icon" onClick={() => startEditing(todo)} aria-label={`${t.edit} ${todo.title}`}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => store.deleteTodo(todo.id)} aria-label={`${t.delete} ${todo.title}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </DashboardListItemMotion>
             );
           })}
         </AnimatePresence>
-      </div>
+        {store.state.todos.length === 0 ? <DashboardEmptyState title={t.emptyTitle} description={t.emptyDescription} icon={CheckSquare} /> : null}
+      </DashboardSection>
     </div>
   );
 }

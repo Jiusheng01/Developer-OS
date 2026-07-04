@@ -2,12 +2,14 @@
 
 import { FormEvent, useState } from "react";
 import { AnimatePresence } from "framer-motion";
+import { NotebookText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DashboardEmptyState } from "@/features/dashboard/components/dashboard-empty-state";
 import { DashboardListItemMotion } from "@/features/dashboard/components/dashboard-motion";
+import { DashboardSection } from "@/features/dashboard/components/dashboard-section";
 import type { DashboardStore } from "@/features/dashboard/hooks/use-dashboard-store";
 import { formatTags, parseTagInput } from "@/features/dashboard/utils/tags";
 import { copy } from "@/lib/i18n/copy";
@@ -30,26 +32,21 @@ export function NotesTab({ store }: { store: DashboardStore }) {
 
   return (
     <div className="grid gap-5">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.addNote}</CardTitle>
-          <CardDescription>{t.description}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_auto]" onSubmit={handleSubmit}>
-            <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t.placeholder} aria-label={t.title} />
-            <Input value={category} onChange={(event) => setCategory(event.target.value)} placeholder={t.categoryPlaceholder} aria-label={t.category} />
-            <Input value={tags} onChange={(event) => setTags(event.target.value)} placeholder={t.tagsPlaceholder} aria-label={t.tags} />
-            <Button type="submit">{t.add}</Button>
-          </form>
-        </CardContent>
-      </Card>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <DashboardSection title={t.addNote} description={t.description} icon={NotebookText}>
+        <form className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_auto]" onSubmit={handleSubmit}>
+          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t.placeholder} aria-label={t.title} />
+          <Input value={category} onChange={(event) => setCategory(event.target.value)} placeholder={t.categoryPlaceholder} aria-label={t.category} />
+          <Input value={tags} onChange={(event) => setTags(event.target.value)} placeholder={t.tagsPlaceholder} aria-label={t.tags} />
+          <Button type="submit">{t.add}</Button>
+        </form>
+      </DashboardSection>
+
+      <DashboardSection title={t.library} description={t.libraryDescription} icon={NotebookText} contentClassName="grid gap-4 lg:grid-cols-2">
         <AnimatePresence initial={false}>
           {store.state.notes.map((note) => (
             <DashboardListItemMotion key={note.id}>
-              <Card>
-                <CardHeader className="grid gap-3">
+              <div className="rounded-md border bg-background/70 p-4">
+                <div className="grid gap-3">
                   <Input value={note.title} onChange={(event) => store.updateNote(note.id, { title: event.target.value })} aria-label={t.title} />
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Input value={note.category} onChange={(event) => store.updateNote(note.id, { category: event.target.value })} aria-label={t.category} />
@@ -66,8 +63,8 @@ export function NotesTab({ store }: { store: DashboardStore }) {
                       <Badge key={tag} variant="outline">{tag}</Badge>
                     ))}
                   </div>
-                </CardHeader>
-                <CardContent>
+                </div>
+                <div className="mt-4">
                   <Textarea
                     value={note.body}
                     onChange={(event) => store.updateNote(note.id, { body: event.target.value })}
@@ -78,12 +75,13 @@ export function NotesTab({ store }: { store: DashboardStore }) {
                     <span>{t.markdownHint}</span>
                     <span>{t.updated} {new Date(note.updatedAt).toLocaleString(locale === "zh" ? "zh-CN" : "en-US")}</span>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </DashboardListItemMotion>
           ))}
         </AnimatePresence>
-      </div>
+        {store.state.notes.length === 0 ? <DashboardEmptyState title={t.emptyTitle} description={t.emptyDescription} icon={NotebookText} className="lg:col-span-2" /> : null}
+      </DashboardSection>
     </div>
   );
 }

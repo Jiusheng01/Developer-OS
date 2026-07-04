@@ -2,13 +2,14 @@
 
 import { FormEvent, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Trash2 } from "lucide-react";
+import { Target, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { DashboardEmptyState } from "@/features/dashboard/components/dashboard-empty-state";
 import { DashboardListItemMotion } from "@/features/dashboard/components/dashboard-motion";
+import { DashboardSection } from "@/features/dashboard/components/dashboard-section";
 import type { DashboardStore } from "@/features/dashboard/hooks/use-dashboard-store";
 import type { GoalStatus } from "@/features/dashboard/types";
 import { copy } from "@/lib/i18n/copy";
@@ -61,47 +62,44 @@ export function GoalsTab({ store }: { store: DashboardStore }) {
 
   return (
     <div className="grid gap-5">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.addGoal}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_8rem_9rem_7rem_auto]" onSubmit={handleSubmit}>
-            <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t.placeholder} aria-label={t.title} />
-            <Input value={targetYear} onChange={(event) => setTargetYear(event.target.value)} placeholder={t.targetYear} aria-label={t.targetYear} />
-            <select
-              value={status}
-              onChange={(event) => setStatus(readStatus(event.target.value))}
-              aria-label={t.status}
-              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {statusOptions.map((option) => (
-                <option key={option} value={option}>{t.statusLabels[option]}</option>
-              ))}
-            </select>
-            <Input value={progress} onChange={(event) => setProgress(event.target.value)} min={0} max={100} type="number" aria-label={t.progress} />
-            <Button type="submit">{t.add}</Button>
-          </form>
-        </CardContent>
-      </Card>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <DashboardSection title={t.addGoal} icon={Target}>
+        <form className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_8rem_9rem_7rem_auto]" onSubmit={handleSubmit}>
+          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t.placeholder} aria-label={t.title} />
+          <Input value={targetYear} onChange={(event) => setTargetYear(event.target.value)} placeholder={t.targetYear} aria-label={t.targetYear} />
+          <select
+            value={status}
+            onChange={(event) => setStatus(readStatus(event.target.value))}
+            aria-label={t.status}
+            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {statusOptions.map((option) => (
+              <option key={option} value={option}>{t.statusLabels[option]}</option>
+            ))}
+          </select>
+          <Input value={progress} onChange={(event) => setProgress(event.target.value)} min={0} max={100} type="number" aria-label={t.progress} />
+          <Button type="submit">{t.add}</Button>
+        </form>
+      </DashboardSection>
+
+      <DashboardSection title={t.activeGoals} description={t.activeGoalsDescription} icon={Target} contentClassName="grid gap-4 lg:grid-cols-2">
         <AnimatePresence initial={false}>
           {store.state.goals.map((goal) => {
             const completedTasks = goal.tasks.filter((task) => task.done).length;
             return (
               <DashboardListItemMotion key={goal.id}>
-                <Card>
-                  <CardHeader className="grid gap-3">
+                <div className="rounded-md border bg-background/70 p-4">
+                  <div className="grid gap-3">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <CardTitle>{goal.title}</CardTitle>
+                      <p className="text-base font-semibold">{goal.title}</p>
                       <Badge variant={goal.status === "active" ? "default" : "secondary"}>{t.statusLabels[goal.status]}</Badge>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_7rem]">
                       <Input value={goal.title} onChange={(event) => store.updateGoal(goal.id, { title: event.target.value })} aria-label={t.title} />
                       <Input value={goal.targetYear ?? ""} onChange={(event) => store.updateGoal(goal.id, { targetYear: event.target.value })} placeholder={t.targetYear} aria-label={t.targetYear} />
                     </div>
-                  </CardHeader>
-                  <CardContent className="grid gap-4">
+                  </div>
+
+                  <div className="mt-4 grid gap-4">
                     <div className="grid gap-3 sm:grid-cols-[9rem_7rem]">
                       <select
                         value={goal.status}
@@ -126,7 +124,7 @@ export function GoalsTab({ store }: { store: DashboardStore }) {
                       <Progress value={goal.progress} className="flex-1" />
                       <span className="w-12 text-right text-sm font-medium">{goal.progress}%</span>
                     </div>
-                    <div className="rounded-md border bg-background p-3">
+                    <div className="rounded-md border bg-background/80 p-3">
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <p className="text-sm font-medium">{t.tasks}</p>
                         <span className="text-xs text-muted-foreground">{completedTasks}/{goal.tasks.length}</span>
@@ -150,16 +148,17 @@ export function GoalsTab({ store }: { store: DashboardStore }) {
                             </DashboardListItemMotion>
                           ))}
                         </AnimatePresence>
-                        {goal.tasks.length === 0 ? <p className="text-sm text-muted-foreground">{t.noTasks}</p> : null}
+                        {goal.tasks.length === 0 ? <DashboardEmptyState title={t.noTasks} icon={Target} /> : null}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </DashboardListItemMotion>
             );
           })}
         </AnimatePresence>
-      </div>
+        {store.state.goals.length === 0 ? <DashboardEmptyState title={t.emptyTitle} description={t.emptyDescription} icon={Target} className="lg:col-span-2" /> : null}
+      </DashboardSection>
     </div>
   );
 }

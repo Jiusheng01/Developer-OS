@@ -4,6 +4,7 @@ import { AccessGate } from "@/features/dashboard/components/access-gate";
 import { DashboardHeader } from "@/features/dashboard/components/dashboard-header";
 import { DashboardSidebar } from "@/features/dashboard/components/dashboard-sidebar";
 import { DashboardTabTransition } from "@/features/dashboard/components/dashboard-motion";
+import { DashboardStatusStrip } from "@/features/dashboard/components/dashboard-status-strip";
 import { GoalsTab } from "@/features/dashboard/tabs/goals-tab";
 import { LearningTab } from "@/features/dashboard/tabs/learning-tab";
 import { NotesTab } from "@/features/dashboard/tabs/notes-tab";
@@ -17,9 +18,17 @@ import { useLocale } from "@/lib/i18n/locale-provider";
 export function DashboardShell() {
   const store = useDashboardStore();
   const { locale } = useLocale();
+  const t = copy[locale].dashboard;
 
   if (!store.hydrated) {
-    return <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">{copy[locale].dashboard.workspace}...</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4 text-muted-foreground">
+        <div className="grid gap-3 text-center">
+          <div className="mx-auto h-8 w-8 animate-pulse rounded-md border bg-card" />
+          <p className="text-sm">{t.loading}...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!store.hasPasscode || !store.state.access.unlocked) {
@@ -28,15 +37,20 @@ export function DashboardShell() {
 
   return (
     <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[16rem_1fr]">
-      <DashboardSidebar activeTab={store.activeTab} onSelect={store.setActiveTab} />
+      <DashboardSidebar activeTab={store.activeTab} providerMode={store.providerMode} onSelect={store.setActiveTab} />
       <div className="min-w-0">
         <DashboardHeader
           activeTab={store.activeTab}
+          providerMode={store.providerMode}
+          dataError={store.dataError}
           theme={store.state.preferences.theme}
           onThemeChange={store.setTheme}
           onLock={store.lock}
         />
-        <main className="mx-auto w-full max-w-6xl px-4 py-5 lg:px-6">
+        <main className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-5 lg:px-6">
+          {store.dataError ? (
+            <DashboardStatusStrip title={t.dataIssue} detail={`${t.dataIssueDetail} ${store.dataError}`} variant="warning" />
+          ) : null}
           <DashboardTabTransition activeKey={store.activeTab}>
             {store.activeTab === "today" ? <TodayTab store={store} /> : null}
             {store.activeTab === "todo" ? <TodoTab store={store} /> : null}
