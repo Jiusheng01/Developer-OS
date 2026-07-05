@@ -145,6 +145,8 @@ export const copy = {
         todos: "Todos",
         learningItems: "Roadmap",
         notePrompts: "Note prompts",
+        targetYear: "Target year",
+        due: "Due",
       },
       todo: {
         addTask: "Add task",
@@ -440,6 +442,8 @@ export const copy = {
         todos: "待办",
         learningItems: "路线图",
         notePrompts: "笔记提示",
+        targetYear: "目标年份",
+        due: "截止",
       },
       todo: {
         addTask: "添加任务",

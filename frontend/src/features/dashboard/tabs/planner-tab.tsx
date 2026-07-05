@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, type ReactNode, useEffect, useState } from "react";
 import { BrainCircuit, CalendarDays, Clock, History, KeyRound, ListChecks, NotebookText, RefreshCcw, Route, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -247,6 +247,12 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
                   </div>
                   <Badge>{draft.status}</Badge>
                 </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  <DraftMetric label={t.goals} value={draft.goals.length} icon={Target} />
+                  <DraftMetric label={t.learningItems} value={draft.learningItems.length} icon={Clock} />
+                  <DraftMetric label={t.todos} value={draft.todos.length} icon={ListChecks} />
+                  <DraftMetric label={t.notePrompts} value={draft.notePrompts.length} icon={NotebookText} />
+                </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button type="button" onClick={() => void handleCommitDraft()} disabled={importing || draft.status === "committed"}>
                     <ListChecks className="h-4 w-4" />
@@ -256,10 +262,47 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
                 </div>
               </div>
               <div className="grid gap-4 lg:grid-cols-2">
-                <PlanBlock title={t.goals} icon={Target} items={draft.goals.map((goal) => goal.targetYear ? `${goal.title} (${goal.targetYear})` : goal.title)} />
-                <PlanBlock title={t.todos} icon={ListChecks} items={draft.todos.map((todo) => `${todo.title} · ${todo.priority}`)} />
-                <PlanBlock title={t.learningItems} icon={Clock} items={draft.learningItems.map((item) => `${item.title} · ${item.area}`)} />
-                <PlanBlock title={t.notePrompts} icon={NotebookText} items={draft.notePrompts.map((prompt) => `${prompt.title} · ${prompt.category}`)} />
+                <PlanBlock title={t.goals} icon={Target}>
+                  {draft.goals.map((goal, index) => (
+                    <DraftItem
+                      key={`${goal.title}-${index}`}
+                      title={goal.title}
+                      meta={goal.targetYear ? `${t.targetYear}: ${goal.targetYear}` : undefined}
+                    />
+                  ))}
+                </PlanBlock>
+                <PlanBlock title={t.todos} icon={ListChecks}>
+                  {draft.todos.map((todo, index) => (
+                    <DraftItem
+                      key={`${todo.title}-${index}`}
+                      title={todo.title}
+                      meta={todo.dueDate ? `${todo.priority} / ${t.due}: ${todo.dueDate}` : todo.priority}
+                      tags={todo.tags}
+                    />
+                  ))}
+                </PlanBlock>
+                <PlanBlock title={t.learningItems} icon={Clock}>
+                  {draft.learningItems.map((item, index) => (
+                    <DraftItem
+                      key={`${item.title}-${index}`}
+                      title={item.title}
+                      meta={`${item.area} / ${item.status} / ${item.progress}%`}
+                      detail={item.notes}
+                      tags={item.tags}
+                    />
+                  ))}
+                </PlanBlock>
+                <PlanBlock title={t.notePrompts} icon={NotebookText}>
+                  {draft.notePrompts.map((prompt, index) => (
+                    <DraftItem
+                      key={`${prompt.title}-${index}`}
+                      title={prompt.title}
+                      meta={prompt.category}
+                      detail={prompt.prompt}
+                      tags={prompt.tags}
+                    />
+                  ))}
+                </PlanBlock>
               </div>
               {deadline ? (
                 <div className="inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-xs text-muted-foreground">
@@ -278,11 +321,11 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
 function PlanBlock({
   title,
   icon: Icon,
-  items,
+  children,
 }: {
   title: string;
   icon: typeof Target;
-  items: string[];
+  children: ReactNode;
 }) {
   return (
     <div className="rounded-md border bg-background/70 p-4">
@@ -291,12 +334,57 @@ function PlanBlock({
         <p className="text-sm font-medium">{title}</p>
       </div>
       <div className="grid gap-2">
-        {items.map((item) => (
-          <p key={item} className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
-            {item}
-          </p>
-        ))}
+        {children}
       </div>
+    </div>
+  );
+}
+
+function DraftMetric({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: number;
+  icon: typeof Target;
+}) {
+  return (
+    <div className="rounded-md border px-3 py-2">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Icon className="h-3.5 w-3.5 text-primary" />
+        {label}
+      </div>
+      <p className="mt-1 text-lg font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function DraftItem({
+  title,
+  meta,
+  detail,
+  tags = [],
+}: {
+  title: string;
+  meta?: string;
+  detail?: string;
+  tags?: string[];
+}) {
+  return (
+    <div className="rounded-md border px-3 py-2">
+      <p className="text-sm font-medium">{title}</p>
+      {meta ? <p className="mt-1 text-xs text-muted-foreground">{meta}</p> : null}
+      {detail ? <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">{detail}</p> : null}
+      {tags.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {tags.slice(0, 4).map((tag) => (
+            <Badge key={tag} variant="outline" className="text-[11px]">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
