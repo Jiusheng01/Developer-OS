@@ -92,6 +92,12 @@ Check backend health:
 .\scripts\smoke-api-health.ps1
 ```
 
+Run a safe API CRUD smoke. This creates temporary smoke records for Todo, Learning, Notes, Goals, and Goal Tasks, then deletes them:
+
+```powershell
+.\scripts\smoke-api-crud.ps1
+```
+
 Reset the local SQLite API database. This is intentionally explicit and destructive:
 
 ```powershell
@@ -152,15 +158,21 @@ Use this checklist when changing Dashboard data access or validating a fresh set
    .\scripts\smoke-api-health.ps1
    ```
 
-3. Start or restart the frontend in API mode:
+3. Verify API CRUD behavior without a browser:
+
+   ```powershell
+   .\scripts\smoke-api-crud.ps1
+   ```
+
+4. Start or restart the frontend in API mode:
 
    ```powershell
    .\scripts\dev-frontend-api.ps1
    ```
 
-4. In `/dashboard`, create and edit one Todo, Learning item, Note, Goal, and Goal Task.
-5. Delete one Todo, Learning item, Note, Goal, and Goal Task.
-6. Refresh the browser and verify the remaining records are still available from the API provider.
+5. In `/dashboard`, create and edit one Todo, Learning item, Note, Goal, and Goal Task.
+6. Delete one Todo, Learning item, Note, Goal, and Goal Task.
+7. Refresh the browser and verify the remaining records are still available from the API provider.
 
 ### Settings data checks
 

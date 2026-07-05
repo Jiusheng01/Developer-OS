@@ -37,6 +37,12 @@ Health check:
 .\scripts\smoke-api-health.ps1
 ```
 
+API CRUD smoke:
+
+```powershell
+.\scripts\smoke-api-crud.ps1
+```
+
 The default SQLite database path is:
 
 ```text
