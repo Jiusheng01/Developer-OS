@@ -1,8 +1,7 @@
 # Developer OS
 
-<p align="right">
-  <a href="README.md"><kbd>中文</kbd></a>
-  <a href="README_EN.md"><kbd>English</kbd></a>
+<p align="left">
+  <a href="README.md"><u>中文</u></a> | <a href="README_EN.md"><u>English</u></a>
 </p>
 
 Personal Developer OS: a public developer site plus a private daily workspace.
