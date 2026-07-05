@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.core.config import get_settings
 from app.schemas.common import HealthResponse
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -7,4 +8,5 @@ router = APIRouter(prefix="/health", tags=["health"])
 
 @router.get("", response_model=HealthResponse)
 def health_check() -> HealthResponse:
-    return HealthResponse(status="ok", service="developer-os-api", version="0.2.0")
+    settings = get_settings()
+    return HealthResponse(status="ok", service="developer-os-api", version=settings.app_version)

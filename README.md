@@ -6,7 +6,7 @@
 
 Developer OS 是一个个人开发者操作系统：它既是公开的个人开发者网站，也是自己每天使用的私人开发工作台。
 
-## V2 架构
+## V3 架构
 
 ```text
 frontend/ 前端应用（Next.js App Router）
@@ -22,14 +22,16 @@ backend/ 后端服务（FastAPI）
   -> SQLite 数据库
 ```
 
-V2 版本保持公开站点由静态结构化数据驱动，同时只为工作台业务数据接入后端：
+V3.0 保持公开站点由静态结构化数据驱动，同时为工作台业务数据补齐后端数据库迁移基础：
 
 - 待办事项
 - 学习项
 - 笔记
 - 目标和目标拆解任务
 
-本地口令、主题、语言和当前标签页仍然保存在浏览器本地。JWT、PostgreSQL、Redis、Docker 和 AI 功能保留到后续版本。
+后端默认仍使用 SQLite，并通过 Alembic 管理 schema；需要时可通过 `DEVELOPER_OS_DATABASE_URL` 切换到本机 PostgreSQL。V3 暂不引入 Docker。JWT、用户数据隔离和前端登录体验会在 V3.1-V3.3 继续实现。
+
+本地口令、主题、语言和当前标签页仍然保存在浏览器本地。
 
 ## 前端
 
@@ -54,6 +56,12 @@ cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
+```
+
+运行数据库迁移：
+
+```powershell
+.\scripts\migrate-api-db.ps1
 ```
 
 在项目根目录运行：
@@ -96,6 +104,12 @@ GET http://127.0.0.1:8000/api/v1/health
 .\scripts\smoke-api-health.ps1
 ```
 
+运行数据库迁移：
+
+```powershell
+.\scripts\migrate-api-db.ps1
+```
+
 运行安全的后端接口增删改查冒烟检查。它会为待办事项、学习项、笔记、目标和目标拆解任务创建临时检查数据，然后删除这些临时数据：
 
 ```powershell
@@ -124,7 +138,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev-backend.ps1
 
 如果前端脚本提示已经有另一个 Next.js 开发服务在运行，先停止现有前端服务再切换模式。如果确认没有 Node 开发服务在运行，可以删除过期的 `frontend\.next\dev\lock` 文件，然后重新启动脚本。
 
-## V2.3 本地存储/后端接口冒烟检查清单
+## V3.0 本地存储/后端接口冒烟检查清单
 
 当修改工作台数据访问逻辑，或验证全新环境时，使用这份清单。
 
@@ -209,6 +223,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev-backend.ps1
 ```powershell
 backend\.venv\Scripts\python.exe -m compileall -q -x "backend[\\/](\.venv|\.pytest_cache)" backend
 backend\.venv\Scripts\python.exe -m pytest backend
+.\scripts\migrate-api-db.ps1 -DatabaseUrl "sqlite:///./backend/developer_os_migration_check.db"
+Remove-Item -LiteralPath backend\developer_os_migration_check.db -Force -ErrorAction SilentlyContinue
 npm run typecheck --prefix frontend
 npm run lint --prefix frontend
 npm run build --prefix frontend

@@ -6,7 +6,7 @@
 
 Personal Developer OS: a public developer site plus a private daily workspace.
 
-## V2 Architecture
+## V3 Architecture
 
 ```text
 frontend/ Next.js App Router
@@ -22,14 +22,16 @@ backend/ FastAPI
   -> SQLite
 ```
 
-V2 keeps the public site static-data driven and adds a backend only for Dashboard business data:
+V3.0 keeps the public site static-data driven and adds migration-backed database infrastructure for Dashboard business data:
 
 - Todo
 - Learning items
 - Notes
 - Goals and goal tasks
 
-Passcode, theme, locale, and active tab remain browser-local. JWT, PostgreSQL, Redis, Docker, and AI features are reserved for later versions.
+The backend still defaults to SQLite and now uses Alembic as the schema source of truth. Set `DEVELOPER_OS_DATABASE_URL` to switch to a local PostgreSQL database. V3 does not introduce Docker. JWT, user-scoped Dashboard data, and frontend auth continue in V3.1-V3.3.
+
+Passcode, theme, locale, and active tab remain browser-local.
 
 ## Frontend
 
@@ -54,6 +56,12 @@ cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
+```
+
+Run database migrations:
+
+```powershell
+.\scripts\migrate-api-db.ps1
 ```
 
 Run from the repository root:
@@ -96,6 +104,12 @@ Check backend health:
 .\scripts\smoke-api-health.ps1
 ```
 
+Run database migrations:
+
+```powershell
+.\scripts\migrate-api-db.ps1
+```
+
 Run a safe API CRUD smoke. This creates temporary smoke records for Todo, Learning, Notes, Goals, and Goal Tasks, then deletes them:
 
 ```powershell
@@ -124,7 +138,7 @@ When switching between local and API provider mode, stop and restart the fronten
 
 If a frontend script reports that another Next.js dev server may already be running, stop the existing frontend server before switching modes. If no Node dev server is running, remove the stale `frontend\.next\dev\lock` file and start the script again.
 
-## V2.3 Local/API Smoke Runbook
+## V3.0 Local/API Smoke Runbook
 
 Use this checklist when changing Dashboard data access or validating a fresh setup.
 
@@ -209,6 +223,8 @@ The default local API database is `backend/developer_os.db`. To reset local API 
 ```powershell
 backend\.venv\Scripts\python.exe -m compileall -q -x "backend[\\/](\.venv|\.pytest_cache)" backend
 backend\.venv\Scripts\python.exe -m pytest backend
+.\scripts\migrate-api-db.ps1 -DatabaseUrl "sqlite:///./backend/developer_os_migration_check.db"
+Remove-Item -LiteralPath backend\developer_os_migration_check.db -Force -ErrorAction SilentlyContinue
 npm run typecheck --prefix frontend
 npm run lint --prefix frontend
 npm run build --prefix frontend

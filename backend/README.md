@@ -1,17 +1,17 @@
 # Developer OS Backend
 
-FastAPI backend for Developer OS V2.
+FastAPI backend for Developer OS V3.
 
 ## Scope
 
-V2 persists Dashboard business data with FastAPI, SQLAlchemy, and SQLite:
+V3.0 persists Dashboard business data with FastAPI, SQLAlchemy, SQLite by default, and Alembic-managed migrations:
 
 - Todo
 - Learning items
 - Notes
 - Goals and goal tasks
 
-Local passcode, theme, language, and active tab remain browser-local. JWT, PostgreSQL, Redis, Docker, and AI features are reserved for later versions.
+Local passcode, theme, language, and active tab remain browser-local. PostgreSQL is supported through `DEVELOPER_OS_DATABASE_URL`. Docker is intentionally out of scope for V3. JWT, user isolation, and frontend auth continue in V3.1-V3.3.
 
 ## Setup
 
@@ -23,12 +23,32 @@ python -m pip install -e ".[dev]"
 Copy-Item .env.example .env
 ```
 
+The default database URL is:
+
+```text
+DEVELOPER_OS_DATABASE_URL=sqlite:///./backend/developer_os.db
+```
+
+To use a local PostgreSQL database, set:
+
+```text
+DEVELOPER_OS_DATABASE_URL=postgresql+psycopg://developer_os:developer_os@localhost:5432/developer_os
+```
+
+The PostgreSQL server and database/user are expected to exist locally; this project does not add Docker in V3.
+
 ## Run
 
 From the repository root:
 
 ```powershell
 .\scripts\dev-backend.ps1
+```
+
+Run database migrations:
+
+```powershell
+.\scripts\migrate-api-db.ps1
 ```
 
 Health check:
@@ -71,6 +91,8 @@ Use `NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=local` or omit the variable to keep the
 ```powershell
 backend\.venv\Scripts\python.exe -m compileall -q -x "backend[\\/](\.venv|\.pytest_cache)" backend
 backend\.venv\Scripts\python.exe -m pytest backend
+.\scripts\migrate-api-db.ps1 -DatabaseUrl "sqlite:///./backend/developer_os_migration_check.db"
+Remove-Item -LiteralPath backend\developer_os_migration_check.db -Force -ErrorAction SilentlyContinue
 npm run typecheck --prefix frontend
 npm run lint --prefix frontend
 npm run build --prefix frontend
@@ -80,4 +102,25 @@ The backend test suite covers health plus Dashboard CRUD behavior for Todo, Lear
 
 ## Migrations
 
-The `alembic/` directory is reserved for the first migration-backed release. V2 initializes SQLite tables during local app startup so the app remains simple to run. When PostgreSQL is introduced, Alembic should become the schema source of truth.
+Alembic is the schema source of truth starting in V3.0.
+
+Run migrations from the repository root:
+
+```powershell
+.\scripts\migrate-api-db.ps1
+```
+
+The script upgrades to `head` by default. To migrate to another revision:
+
+```powershell
+.\scripts\migrate-api-db.ps1 -Revision 20260705_0001
+```
+
+To validate migrations against a temporary SQLite database:
+
+```powershell
+.\scripts\migrate-api-db.ps1 -DatabaseUrl "sqlite:///./backend/developer_os_migration_check.db"
+Remove-Item -LiteralPath backend\developer_os_migration_check.db -Force -ErrorAction SilentlyContinue
+```
+
+V3.0 keeps startup table creation as a local compatibility fallback while migrations are introduced. For clean PostgreSQL databases, run Alembic before starting the API.

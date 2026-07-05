@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "Developer OS API"
+    app_version: str = "0.3.0"
     app_env: str = "development"
     api_v1_prefix: str = "/api/v1"
     database_url: str = "sqlite:///./backend/developer_os.db"

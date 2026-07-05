@@ -25,7 +25,11 @@ def create_lifespan(init_db_on_startup: bool) -> object:
 
 def create_app(init_db_on_startup: bool = True) -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title=settings.app_name, version="0.2.0", lifespan=create_lifespan(init_db_on_startup))
+    app = FastAPI(
+        title=settings.app_name,
+        version=settings.app_version,
+        lifespan=create_lifespan(init_db_on_startup),
+    )
 
     app.add_middleware(
         CORSMiddleware,
