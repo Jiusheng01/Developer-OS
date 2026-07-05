@@ -47,7 +47,7 @@ class FakePlannerProvider:
 class FakeProviderTestProvider:
     def generate_json(self, request: LLMJsonRequest) -> dict[str, object]:
         assert request.model == "gpt-test"
-        return {"status": "ok"}
+        return {"ok": True}
 
 
 class InvalidPlannerProvider:
@@ -207,6 +207,20 @@ def test_invalid_ai_provider_config_returns_400(client: TestClient, auth_headers
 
     assert response.status_code == 400
     assert response.json()["detail"] == "base_url must be a valid http or https URL"
+
+
+def test_ai_provider_create_normalizes_full_chat_completions_url(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    response = client.post(
+        "/api/v1/ai/providers",
+        json=provider_payload(baseUrl="https://api.example.com/v1/chat/completions"),
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["baseUrl"] == "https://api.example.com/v1"
 
 
 def test_ai_provider_connection_test_uses_provider_boundary(

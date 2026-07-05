@@ -1,7 +1,7 @@
 from collections.abc import Mapping, Sequence
 import json
 from datetime import UTC, date, datetime
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 from uuid import uuid4
 
 from app.core.errors import ResourceNotFoundError, ValidationError
@@ -59,6 +59,9 @@ def _clean_url(value: object) -> str:
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ValidationError("base_url must be a valid http or https URL")
+    if parsed.path.endswith("/chat/completions"):
+        normalized_path = parsed.path[: -len("/chat/completions")] or ""
+        return urlunparse((parsed.scheme, parsed.netloc, normalized_path.rstrip("/"), "", "", ""))
     return url
 
 
@@ -240,7 +243,9 @@ class AIProviderService:
                 user_prompt='Return {"status":"ok"} to confirm the provider is reachable.',
             )
         )
-        if payload.get("status") != "ok":
+        status = payload.get("status")
+        ok = payload.get("ok")
+        if not (isinstance(status, str) and status.strip().lower() == "ok") and ok is not True:
             raise ValidationError("AI provider test returned an unexpected response")
         return AIProviderTestResult(provider_id=provider_id, ok=True, message="AI provider is reachable")
 
