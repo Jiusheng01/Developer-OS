@@ -9,7 +9,7 @@ import {
   type DashboardDataSnapshot,
   stateWithSnapshot,
 } from "@/features/dashboard/data/dashboard-data-provider";
-import { apiRequest } from "@/features/dashboard/data/http-client";
+import { apiRequest } from "@/lib/api/http-client";
 import {
   parseDashboardImport,
   serializeDashboardExport,

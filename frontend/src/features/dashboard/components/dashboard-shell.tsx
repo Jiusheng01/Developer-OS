@@ -1,5 +1,7 @@
 "use client";
 
+import { AuthGate } from "@/features/auth/components/auth-gate";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { AccessGate } from "@/features/dashboard/components/access-gate";
 import { DashboardHeader } from "@/features/dashboard/components/dashboard-header";
 import { DashboardSidebar } from "@/features/dashboard/components/dashboard-sidebar";
@@ -11,11 +13,31 @@ import { NotesTab } from "@/features/dashboard/tabs/notes-tab";
 import { SettingsTab } from "@/features/dashboard/tabs/settings-tab";
 import { TodayTab } from "@/features/dashboard/tabs/today-tab";
 import { TodoTab } from "@/features/dashboard/tabs/todo-tab";
+import { getDashboardDataProviderMode } from "@/features/dashboard/data/provider-config";
 import { useDashboardStore } from "@/features/dashboard/hooks/use-dashboard-store";
 import { copy } from "@/lib/i18n/copy";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
 export function DashboardShell() {
+  const providerMode = getDashboardDataProviderMode();
+
+  if (providerMode === "api") {
+    return (
+      <AuthGate>
+        <AuthenticatedDashboardShell />
+      </AuthGate>
+    );
+  }
+
+  return <DashboardWorkspace requireLocalAccess />;
+}
+
+function AuthenticatedDashboardShell() {
+  const auth = useAuth();
+  return <DashboardWorkspace requireLocalAccess={false} onLock={auth.logout} />;
+}
+
+function DashboardWorkspace({ requireLocalAccess, onLock }: { requireLocalAccess: boolean; onLock?: () => void }) {
   const store = useDashboardStore();
   const { locale } = useLocale();
   const t = copy[locale].dashboard;
@@ -31,7 +53,7 @@ export function DashboardShell() {
     );
   }
 
-  if (!store.hasPasscode || !store.state.access.unlocked) {
+  if (requireLocalAccess && (!store.hasPasscode || !store.state.access.unlocked)) {
     return <AccessGate hasPasscode={store.hasPasscode} onCreatePasscode={store.createPasscode} onUnlock={store.unlock} />;
   }
 
@@ -45,7 +67,7 @@ export function DashboardShell() {
           dataError={store.dataError}
           theme={store.state.preferences.theme}
           onThemeChange={store.setTheme}
-          onLock={store.lock}
+          onLock={onLock ?? store.lock}
         />
         <main className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-5 lg:px-6">
           {store.dataError ? (

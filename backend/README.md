@@ -11,7 +11,7 @@ V3 persists Dashboard business data with FastAPI, SQLAlchemy, SQLite by default,
 - Notes
 - Goals and goal tasks
 
-Local passcode, theme, language, and active tab remain browser-local. PostgreSQL is supported through `DEVELOPER_OS_DATABASE_URL`. Docker is intentionally out of scope for V3. Frontend auth continues in V3.3.
+Local mode passcode, theme, language, and active tab remain browser-local. PostgreSQL is supported through `DEVELOPER_OS_DATABASE_URL`. Docker is intentionally out of scope for V3. Frontend API mode now uses the V3.3 login/register gate.
 
 ## Setup
 
@@ -159,6 +159,14 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
 ```
 
 Use `NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=local` or omit the variable to keep the V1 LocalStorage mode.
+
+In API mode, `/dashboard` displays the frontend auth gate before loading Dashboard business data. Registration calls `POST /api/v1/auth/register` and then signs in with `POST /api/v1/auth/login`. After sign-in, Todo, Learning, Notes, Goals, and Goal Task requests automatically include:
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+If `DEVELOPER_OS_PUBLIC_REGISTRATION_ENABLED=false`, the frontend hides the registration tab and asks the user to sign in with an existing account.
 
 ## Validation
 

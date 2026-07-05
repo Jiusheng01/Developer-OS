@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/features/auth/hooks/use-auth";
 import { LocaleProvider } from "@/lib/i18n/locale-provider";
 import { ThemeProvider } from "@/lib/theme/theme-provider";
 
@@ -13,7 +14,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" suppressHydrationWarning>
       <body>
         <LocaleProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <AuthProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </AuthProvider>
         </LocaleProvider>
       </body>
     </html>

@@ -29,9 +29,9 @@ V3.0 保持公开站点由静态结构化数据驱动，同时为工作台业务
 - 笔记
 - 目标和目标拆解任务
 
-后端默认仍使用 SQLite，并通过 Alembic 管理 schema；需要时可通过 `DEVELOPER_OS_DATABASE_URL` 切换到本机 PostgreSQL。V3 暂不引入 Docker。V3.1 已加入 JWT 认证和公开注册；V3.2 已让 Dashboard 业务 API 按当前用户隔离。前端登录体验会在 V3.3 继续实现。
+后端默认仍使用 SQLite，并通过 Alembic 管理 schema；需要时可通过 `DEVELOPER_OS_DATABASE_URL` 切换到本机 PostgreSQL。V3 暂不引入 Docker。V3.1 已加入 JWT 认证和公开注册；V3.2 已让 Dashboard 业务 API 按当前用户隔离；V3.3 已接入前端登录/注册体验。
 
-本地口令、主题、语言和当前标签页仍然保存在浏览器本地。
+API 模式下，前端会先显示登录/注册界面，登录成功后 Dashboard 请求会自动携带 Bearer token。本地存储模式仍使用浏览器本地口令。主题、语言和当前标签页仍然保存在浏览器本地。
 
 ## 前端
 
@@ -127,7 +127,7 @@ GET  /api/v1/auth/me
 .\scripts\smoke-api-crud.ps1
 ```
 
-V3.2 后，前端 API 模式需要登录态。前端登录/注册 UI 会在 V3.3 补齐；在此之前，日常使用优先启动浏览器本地存储模式。
+V3.3 后，前端 API 模式会在 `/dashboard` 自动进入登录/注册流程。注册成功后会自动登录；如果后端关闭公开注册，前端会隐藏注册入口并提示使用已有账号登录。
 
 重置本地 SQLite 后端数据库。该操作是显式且具有破坏性的：
 
@@ -201,9 +201,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev-backend.ps1
    .\scripts\dev-frontend-api.ps1
    ```
 
-5. 在 `/dashboard` 中创建并编辑一个待办事项、学习项、笔记、目标和目标拆解任务。
-6. 删除一个待办事项、学习项、笔记、目标和目标拆解任务。
-7. 刷新浏览器，确认剩余数据仍然来自后端接口数据源。
+5. 打开 `http://127.0.0.1:3000/dashboard`，注册或登录一个账号。
+6. 创建并编辑一个待办事项、学习项、笔记、目标和目标拆解任务。
+7. 删除一个待办事项、学习项、笔记、目标和目标拆解任务。
+8. 刷新浏览器，确认仍处于登录态，且剩余数据来自后端接口数据源。
+9. 点击顶部退出登录，确认再次进入登录界面。
 
 ### 设置页数据检查
 
@@ -221,7 +223,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev-backend.ps1
 1. 保持前端配置为 `NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=api`。
 2. 停止后端。
 3. 打开 `/dashboard`。
-4. 确认工作台仍然可用，并显示非阻塞的数据错误，而不是白屏。
+4. 未登录时确认登录界面显示 API 连接错误，而不是白屏。
+5. 已有有效登录态时，确认工作台仍可打开，并显示非阻塞的数据错误。
 
 ### SQLite 重置
 

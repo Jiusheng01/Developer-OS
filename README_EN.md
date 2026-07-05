@@ -29,9 +29,9 @@ V3.0 keeps the public site static-data driven and adds migration-backed database
 - Notes
 - Goals and goal tasks
 
-The backend still defaults to SQLite and now uses Alembic as the schema source of truth. Set `DEVELOPER_OS_DATABASE_URL` to switch to a local PostgreSQL database. V3 does not introduce Docker. V3.1 adds JWT auth and public registration; V3.2 scopes Dashboard business APIs to the current user. Frontend auth continues in V3.3.
+The backend still defaults to SQLite and now uses Alembic as the schema source of truth. Set `DEVELOPER_OS_DATABASE_URL` to switch to a local PostgreSQL database. V3 does not introduce Docker. V3.1 adds JWT auth and public registration; V3.2 scopes Dashboard business APIs to the current user; V3.3 adds the frontend login/register experience.
 
-Passcode, theme, locale, and active tab remain browser-local.
+In API mode, the frontend shows login/register before the Dashboard and automatically attaches the bearer token to business API requests. Local mode still uses the browser-local passcode. Theme, locale, and active tab remain browser-local.
 
 ## Frontend
 
@@ -127,7 +127,7 @@ Run a safe API CRUD smoke. It registers or logs in a smoke user, creates tempora
 .\scripts\smoke-api-crud.ps1
 ```
 
-After V3.2, frontend API mode requires auth state. The login/register UI lands in V3.3; until then, use localStorage mode for daily browser use.
+After V3.3, frontend API mode automatically enters the login/register flow at `/dashboard`. Successful registration signs in immediately. If the backend disables public registration, the frontend hides the registration entry point and prompts you to use an existing account.
 
 Reset the local SQLite API database. This is intentionally explicit and destructive:
 
@@ -201,9 +201,11 @@ Use this checklist when changing Dashboard data access or validating a fresh set
    .\scripts\dev-frontend-api.ps1
    ```
 
-5. In `/dashboard`, create and edit one Todo, Learning item, Note, Goal, and Goal Task.
-6. Delete one Todo, Learning item, Note, Goal, and Goal Task.
-7. Refresh the browser and verify the remaining records are still available from the API provider.
+5. Open `http://127.0.0.1:3000/dashboard`, then register or sign in.
+6. Create and edit one Todo, Learning item, Note, Goal, and Goal Task.
+7. Delete one Todo, Learning item, Note, Goal, and Goal Task.
+8. Refresh the browser and verify you stay signed in and the remaining records still come from the API provider.
+9. Click Sign out in the header and verify the login screen returns.
 
 ### Settings data checks
 
@@ -221,7 +223,8 @@ Use this checklist when changing Dashboard data access or validating a fresh set
 1. Keep the frontend configured with `NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=api`.
 2. Stop the backend.
 3. Open `/dashboard`.
-4. Verify the Dashboard remains usable and shows a non-blocking data error instead of a blank screen.
+4. When signed out, verify the login screen shows an API connection error instead of a blank screen.
+5. With an existing valid session, verify the Dashboard can still open and shows a non-blocking data error.
 
 ### SQLite reset
 
