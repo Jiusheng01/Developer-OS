@@ -121,6 +121,7 @@ export function ModelsTab() {
     setDisplayName(preset.displayName);
     setBaseUrl(preset.baseUrl);
     setModel(preset.model);
+    setApiKey("");
     setSelectedPresetId(preset.id);
     setError("");
     setMessage(t.presetApplied.replace("{provider}", preset.providerName));
