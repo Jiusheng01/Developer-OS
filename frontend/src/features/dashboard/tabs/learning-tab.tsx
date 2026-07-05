@@ -19,6 +19,8 @@ import { copy } from "@/lib/i18n/copy";
 import { pickLocale, useLocale } from "@/lib/i18n/locale-provider";
 
 const statusOptions: LearningStatus[] = ["queued", "active", "review", "done"];
+type LearningFilter = "all" | LearningStatus;
+const learningFilters: LearningFilter[] = ["all", ...statusOptions];
 
 function readStatus(value: string): LearningStatus {
   return statusOptions.find((status) => status === value) ?? "queued";
@@ -37,6 +39,8 @@ export function LearningTab({ store }: { store: DashboardStore }) {
   const [status, setStatus] = useState<LearningStatus>("queued");
   const [progress, setProgress] = useState("0");
   const [tags, setTags] = useState("");
+  const [filter, setFilter] = useState<LearningFilter>("all");
+  const visibleItems = store.state.learningItems.filter((item) => (filter === "all" ? true : item.status === filter));
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,8 +82,21 @@ export function LearningTab({ store }: { store: DashboardStore }) {
       </DashboardSection>
 
       <DashboardSection title={t.items} description={t.itemsDescription} icon={Route} contentClassName="grid gap-4">
+        <div className="flex flex-wrap gap-2">
+          {learningFilters.map((option) => (
+            <Button
+              key={option}
+              type="button"
+              size="sm"
+              variant={filter === option ? "default" : "outline"}
+              onClick={() => setFilter(option)}
+            >
+              {option === "all" ? t.all : t.statusLabels[option]}
+            </Button>
+          ))}
+        </div>
         <AnimatePresence initial={false}>
-          {store.state.learningItems.map((item) => (
+          {visibleItems.map((item) => (
             <DashboardListItemMotion key={item.id} className="grid gap-4 rounded-md border bg-background/70 p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="grid min-w-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_9rem_7rem]">
@@ -129,6 +146,7 @@ export function LearningTab({ store }: { store: DashboardStore }) {
           ))}
         </AnimatePresence>
         {store.state.learningItems.length === 0 ? <DashboardEmptyState title={t.emptyTitle} description={t.emptyDescription} icon={BookOpenCheck} /> : null}
+        {store.state.learningItems.length > 0 && visibleItems.length === 0 ? <DashboardEmptyState title={t.noMatches} icon={BookOpenCheck} /> : null}
       </DashboardSection>
 
       <DashboardSection title={t.publicContext} icon={BookOpenCheck} contentClassName="grid gap-3 lg:grid-cols-3">

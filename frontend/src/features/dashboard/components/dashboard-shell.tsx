@@ -59,7 +59,17 @@ function DashboardWorkspace({ onSignOut }: { onSignOut?: () => void }) {
         />
         <main className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-5 lg:px-6">
           {store.dataError ? (
-            <DashboardStatusStrip title={t.dataIssue} detail={`${t.dataIssueDetail} ${store.dataError}`} variant="warning" />
+            <DashboardStatusStrip
+              title={t.dataIssue}
+              detail={`${t.dataIssueDetail} ${store.dataError}`}
+              variant="warning"
+              actionLabel={t.retry}
+              onAction={() => void store.reloadData()}
+              actionDisabled={!store.hydrated}
+            />
+          ) : null}
+          {store.isMutating ? (
+            <DashboardStatusStrip title={t.syncing} detail={t.syncingDetail} variant="info" />
           ) : null}
           <DashboardTabTransition activeKey={store.activeTab}>
             {store.activeTab === "today" ? <TodayTab store={store} /> : null}

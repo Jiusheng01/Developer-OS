@@ -17,6 +17,8 @@ import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 
 const priorityOptions: TodoPriority[] = ["low", "medium", "high"];
+type TodoFilter = "all" | "open" | "done" | "high";
+const todoFilters: TodoFilter[] = ["all", "open", "done", "high"];
 
 function readPriority(value: string): TodoPriority {
   return priorityOptions.find((priority) => priority === value) ?? "medium";
@@ -41,6 +43,13 @@ export function TodoTab({ store }: { store: DashboardStore }) {
   const [editPriority, setEditPriority] = useState<TodoPriority>("medium");
   const [editTags, setEditTags] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
+  const [filter, setFilter] = useState<TodoFilter>("all");
+  const visibleTodos = store.state.todos.filter((todo) => {
+    if (filter === "open") return !todo.done;
+    if (filter === "done") return todo.done;
+    if (filter === "high") return todo.priority === "high";
+    return true;
+  });
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -99,8 +108,21 @@ export function TodoTab({ store }: { store: DashboardStore }) {
         </form>
       </DashboardSection>
       <DashboardSection title={t.tasks} description={t.tasksDescription} icon={CheckSquare} contentClassName="grid gap-3">
+        <div className="flex flex-wrap gap-2">
+          {todoFilters.map((option) => (
+            <Button
+              key={option}
+              type="button"
+              size="sm"
+              variant={filter === option ? "default" : "outline"}
+              onClick={() => setFilter(option)}
+            >
+              {t.filterLabels[option]}
+            </Button>
+          ))}
+        </div>
         <AnimatePresence initial={false}>
-          {store.state.todos.map((todo) => {
+          {visibleTodos.map((todo) => {
             const isEditing = editingId === todo.id;
             const dueDateLabel = formatDueDate(todo.dueDate, locale);
 
@@ -176,6 +198,7 @@ export function TodoTab({ store }: { store: DashboardStore }) {
           })}
         </AnimatePresence>
         {store.state.todos.length === 0 ? <DashboardEmptyState title={t.emptyTitle} description={t.emptyDescription} icon={CheckSquare} /> : null}
+        {store.state.todos.length > 0 && visibleTodos.length === 0 ? <DashboardEmptyState title={t.noMatches} icon={CheckSquare} /> : null}
       </DashboardSection>
     </div>
   );

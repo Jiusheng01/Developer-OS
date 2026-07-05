@@ -48,6 +48,9 @@ export const copy = {
       dataReady: "Data ready",
       dataIssue: "Data issue",
       dataIssueDetail: "API request failed. Check the backend server or sign in again.",
+      retry: "Retry",
+      syncing: "Syncing changes",
+      syncingDetail: "Your latest action is being saved to the API workspace.",
       loading: "Loading workspace",
       tabs: { today: "Today", todo: "Todo", learning: "Learning", notes: "Notes", goals: "Goals", settings: "Settings" },
       auth: {
@@ -121,6 +124,8 @@ export const copy = {
         edit: "Edit",
         toggle: "Toggle",
         delete: "Delete",
+        filterLabels: { all: "All", open: "Open", done: "Done", high: "High priority" },
+        noMatches: "No tasks match this filter.",
       },
       learning: {
         privatePlan: "Private learning plan",
@@ -143,6 +148,8 @@ export const copy = {
         notesPlaceholder: "Notes, links, questions, and next actions...",
         delete: "Delete learning item",
         publicContext: "Public roadmap context",
+        all: "All",
+        noMatches: "No learning items match this filter.",
       },
       notes: {
         addNote: "Add note",
@@ -163,6 +170,11 @@ export const copy = {
         delete: "Delete note",
         markdownHint: "Markdown text is stored in your workspace account.",
         updated: "Updated",
+        search: "Search notes",
+        searchPlaceholder: "Search title, body, category, or tags",
+        categoryFilter: "Category filter",
+        allCategories: "All categories",
+        noMatches: "No notes match this search.",
       },
       goals: {
         addGoal: "Add goal",
@@ -252,6 +264,9 @@ export const copy = {
       dataReady: "数据就绪",
       dataIssue: "数据异常",
       dataIssueDetail: "API 请求失败。请检查后端服务或重新登录。",
+      retry: "重试",
+      syncing: "正在同步",
+      syncingDetail: "正在把最新操作保存到 API 工作区。",
       loading: "正在载入工作台",
       tabs: { today: "今日", todo: "待办", learning: "学习", notes: "笔记", goals: "目标", settings: "设置" },
       auth: {
@@ -325,6 +340,8 @@ export const copy = {
         edit: "编辑",
         toggle: "切换",
         delete: "删除",
+        filterLabels: { all: "全部", open: "未完成", done: "已完成", high: "高优先级" },
+        noMatches: "没有符合当前筛选的任务。",
       },
       learning: {
         privatePlan: "私人学习计划",
@@ -347,6 +364,8 @@ export const copy = {
         notesPlaceholder: "记录笔记、链接、问题和下一步行动...",
         delete: "删除学习项",
         publicContext: "公开路线参考",
+        all: "全部",
+        noMatches: "没有符合当前筛选的学习项。",
       },
       notes: {
         addNote: "添加笔记",
@@ -367,6 +386,11 @@ export const copy = {
         delete: "删除笔记",
         markdownHint: "Markdown 文本会保存在你的工作区账号中。",
         updated: "更新于",
+        search: "搜索笔记",
+        searchPlaceholder: "搜索标题、正文、分类或标签",
+        categoryFilter: "分类筛选",
+        allCategories: "全部分类",
+        noMatches: "没有符合当前搜索的笔记。",
       },
       goals: {
         addGoal: "添加目标",

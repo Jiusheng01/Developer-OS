@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { NotebookText, Trash2 } from "lucide-react";
+import { NotebookText, Search, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,19 @@ export function NotesTab({ store }: { store: DashboardStore }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [tags, setTags] = useState("");
+  const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const categories = Array.from(new Set(store.state.notes.map((note) => note.category).filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b),
+  );
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleNotes = store.state.notes.filter((note) => {
+    const matchesCategory = categoryFilter === "all" || note.category === categoryFilter;
+    if (!matchesCategory) return false;
+    if (!normalizedQuery) return true;
+    const searchable = [note.title, note.body, note.category, ...note.tags].join(" ").toLowerCase();
+    return searchable.includes(normalizedQuery);
+  });
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,8 +55,31 @@ export function NotesTab({ store }: { store: DashboardStore }) {
       </DashboardSection>
 
       <DashboardSection title={t.library} description={t.libraryDescription} icon={NotebookText} contentClassName="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-3 lg:col-span-2 sm:grid-cols-[minmax(0,1fr)_14rem]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t.searchPlaceholder}
+              aria-label={t.search}
+              className="pl-9"
+            />
+          </div>
+          <select
+            value={categoryFilter}
+            onChange={(event) => setCategoryFilter(event.target.value)}
+            aria-label={t.categoryFilter}
+            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="all">{t.allCategories}</option>
+            {categories.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
         <AnimatePresence initial={false}>
-          {store.state.notes.map((note) => (
+          {visibleNotes.map((note) => (
             <DashboardListItemMotion key={note.id}>
               <div className="rounded-md border bg-background/70 p-4">
                 <div className="grid gap-3">
@@ -86,6 +122,7 @@ export function NotesTab({ store }: { store: DashboardStore }) {
           ))}
         </AnimatePresence>
         {store.state.notes.length === 0 ? <DashboardEmptyState title={t.emptyTitle} description={t.emptyDescription} icon={NotebookText} className="lg:col-span-2" /> : null}
+        {store.state.notes.length > 0 && visibleNotes.length === 0 ? <DashboardEmptyState title={t.noMatches} icon={NotebookText} className="lg:col-span-2" /> : null}
       </DashboardSection>
     </div>
   );

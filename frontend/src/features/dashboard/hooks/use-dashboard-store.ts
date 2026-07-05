@@ -86,6 +86,7 @@ export function useDashboardStore() {
   const [state, setState] = useState<DashboardState>(() => createInitialDashboardState());
   const [dataHydrated, setDataHydrated] = useState(false);
   const [dataError, setDataError] = useState<string | undefined>();
+  const [mutationCount, setMutationCount] = useState(0);
 
   const persistPreferences = useCallback((preferences: DashboardState["preferences"]) => {
     saveDashboardPreferences(preferences);
@@ -137,12 +138,28 @@ export function useDashboardStore() {
     });
   }, []);
 
+  const reloadData = useCallback(async () => {
+    setDataHydrated(false);
+    setDataError(undefined);
+    try {
+      const snapshot = await provider.loadData();
+      setState((current) => stateWithSnapshot(current, snapshot));
+    } catch (error) {
+      setDataError(getErrorMessage(error));
+    } finally {
+      setDataHydrated(true);
+    }
+  }, [provider]);
+
   const runProviderAction = useCallback(async (action: () => Promise<void>) => {
     setDataError(undefined);
+    setMutationCount((count) => count + 1);
     try {
       await action();
     } catch (error) {
       setDataError(getErrorMessage(error));
+    } finally {
+      setMutationCount((count) => Math.max(0, count - 1));
     }
   }, []);
 
@@ -420,9 +437,11 @@ export function useDashboardStore() {
     state,
     hydrated: browserHydrated && dataHydrated,
     dataError,
+    isMutating: mutationCount > 0,
     providerMode,
     activeTab,
     summary,
+    reloadData,
     setActiveTab,
     setTheme,
     addTodo,
