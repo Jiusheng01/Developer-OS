@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Database, Languages, Palette, Trash2 } from "lucide-react";
+import { LogOut, Palette, RefreshCcw, Trash2 } from "lucide-react";
 import { LanguageToggle } from "@/components/shared/language-toggle";
 import { Button } from "@/components/ui/button";
 import { DashboardPanelMotion } from "@/features/dashboard/components/dashboard-motion";
-import { DashboardProviderBadge } from "@/features/dashboard/components/dashboard-provider-badge";
 import { DashboardSection } from "@/features/dashboard/components/dashboard-section";
 import { DashboardStatusStrip } from "@/features/dashboard/components/dashboard-status-strip";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import type { DashboardStore } from "@/features/dashboard/hooks/use-dashboard-store";
 import { copy } from "@/lib/i18n/copy";
 import { useLocale } from "@/lib/i18n/locale-provider";
@@ -16,11 +16,20 @@ import type { ThemePreference } from "@/lib/theme/theme-provider";
 const themes: ThemePreference[] = ["system", "light", "dark"];
 
 export function SettingsTab({ store }: { store: DashboardStore }) {
+  const auth = useAuth();
   const { locale } = useLocale();
-  const dashboardCopy = copy[locale].dashboard;
-  const t = dashboardCopy.settings;
+  const t = copy[locale].dashboard.settings;
   const [dataMessage, setDataMessage] = useState("");
   const [resetArmed, setResetArmed] = useState(false);
+  const [reloading, setReloading] = useState(false);
+
+  async function handleReloadData() {
+    setResetArmed(false);
+    setReloading(true);
+    await store.reloadData();
+    setReloading(false);
+    setDataMessage(t.reloadSubmitted);
+  }
 
   function handleArmReset() {
     setResetArmed(true);
@@ -40,61 +49,76 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
 
   return (
     <div className="grid gap-5">
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
         <DashboardPanelMotion>
-          <DashboardSection title={t.dataProvider} description={t.dataProviderDescription} icon={Database} contentClassName="grid gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <DashboardProviderBadge mode={store.providerMode} labels={dashboardCopy.providerLabels} />
-            </div>
-            <DashboardStatusStrip
-              title={store.dataError ? t.providerIssue : t.providerHealthy}
-              detail={store.dataError}
-              variant={store.dataError ? "warning" : "ok"}
-            />
-          </DashboardSection>
-        </DashboardPanelMotion>
-
-        <DashboardPanelMotion>
-          <DashboardSection title={t.theme} description={t.themeDescription} icon={Palette}>
-            <div className="flex flex-wrap gap-2">
-              {themes.map((theme) => (
-                <Button
-                  key={theme}
-                  type="button"
-                  variant={store.state.preferences.theme === theme ? "default" : "outline"}
-                  onClick={() => store.setTheme(theme)}
-                >
-                  {theme}
-                </Button>
-              ))}
-            </div>
-          </DashboardSection>
-        </DashboardPanelMotion>
-
-        <DashboardPanelMotion>
-          <DashboardSection title={t.language} description={t.languageDescription} icon={Languages}>
-            <LanguageToggle />
-          </DashboardSection>
-        </DashboardPanelMotion>
-
-        <DashboardPanelMotion>
-          <DashboardSection title={t.localData} description={t.localDataDescription} icon={Trash2}>
+          <DashboardSection title={t.preferences} description={t.preferencesDescription} icon={Palette} contentClassName="grid gap-5">
             <div className="grid gap-3">
+              <div>
+                <p className="text-sm font-medium">{t.theme}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t.themeDescription}</p>
+              </div>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="destructive" onClick={resetArmed ? handleConfirmReset : handleArmReset}>
-                  <Trash2 className="h-4 w-4" />
-                  {resetArmed ? t.confirmReset : t.clearLocalData}
-                </Button>
+                {themes.map((theme) => (
+                  <Button
+                    key={theme}
+                    type="button"
+                    variant={store.state.preferences.theme === theme ? "default" : "outline"}
+                    onClick={() => store.setTheme(theme)}
+                  >
+                    {t.themeLabels[theme]}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-3 border-t pt-5">
+              <div>
+                <p className="text-sm font-medium">{t.language}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t.languageDescription}</p>
+              </div>
+              <LanguageToggle />
+            </div>
+          </DashboardSection>
+        </DashboardPanelMotion>
+
+        <div className="grid gap-5">
+          <DashboardPanelMotion>
+            <DashboardSection title={t.workspaceActions} description={t.workspaceActionsDescription} icon={RefreshCcw}>
+              <div className="grid gap-3">
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" onClick={() => void handleReloadData()} disabled={reloading || store.isMutating}>
+                    <RefreshCcw className="h-4 w-4" />
+                    {reloading ? t.reloading : t.reloadData}
+                  </Button>
+                  <Button type="button" variant="destructive" onClick={resetArmed ? handleConfirmReset : handleArmReset} disabled={store.isMutating}>
+                    <Trash2 className="h-4 w-4" />
+                    {resetArmed ? t.confirmReset : t.clearLocalData}
+                  </Button>
+                </div>
+                {resetArmed ? (
+                  <DashboardStatusStrip
+                    title={t.resetPending}
+                    detail={t.resetPendingDetail}
+                    variant="warning"
+                  />
+                ) : null}
                 {resetArmed ? (
                   <Button type="button" variant="outline" onClick={handleCancelReset}>
                     {t.cancelReset}
                   </Button>
                 ) : null}
               </div>
-              {resetArmed ? <DashboardStatusStrip title={t.resetPending} variant="warning" /> : null}
-            </div>
-          </DashboardSection>
-        </DashboardPanelMotion>
+            </DashboardSection>
+          </DashboardPanelMotion>
+
+          <DashboardPanelMotion>
+            <DashboardSection title={t.session} description={t.sessionDescription} icon={LogOut}>
+              <Button type="button" variant="outline" onClick={auth.logout}>
+                <LogOut className="h-4 w-4" />
+                {copy[locale].dashboard.auth.signOut}
+              </Button>
+            </DashboardSection>
+          </DashboardPanelMotion>
+        </div>
       </div>
 
       {dataMessage ? <DashboardStatusStrip title={dataMessage} variant="info" /> : null}
