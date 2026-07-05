@@ -1,6 +1,9 @@
 # Developer OS
 
-[English](README_EN.md)
+<p align="right">
+  <a href="README.md"><kbd>中文</kbd></a>
+  <a href="README_EN.md"><kbd>English</kbd></a>
+</p>
 
 Developer OS 是一个个人开发者操作系统：它既是公开的个人开发者网站，也是自己每天使用的私人开发工作台。
 
