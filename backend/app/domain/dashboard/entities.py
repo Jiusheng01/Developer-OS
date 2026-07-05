@@ -26,6 +26,7 @@ def as_goal_status(value: object) -> GoalStatus:
 @dataclass(frozen=True)
 class Todo:
     id: str
+    user_id: str
     title: str
     done: bool
     priority: TodoPriority
@@ -38,6 +39,7 @@ class Todo:
 @dataclass(frozen=True)
 class LearningItem:
     id: str
+    user_id: str
     title: str
     area: str
     status: LearningStatus
@@ -50,6 +52,7 @@ class LearningItem:
 @dataclass(frozen=True)
 class Note:
     id: str
+    user_id: str
     title: str
     body: str
     category: str
@@ -68,6 +71,7 @@ class GoalTask:
 @dataclass(frozen=True)
 class Goal:
     id: str
+    user_id: str
     title: str
     progress: int
     status: GoalStatus

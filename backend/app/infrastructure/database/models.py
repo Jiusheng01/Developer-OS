@@ -22,6 +22,7 @@ class TodoModel(Base):
     __tablename__ = "todos"
 
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(240), nullable=False)
     done: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     priority: Mapped[str] = mapped_column(String(20), nullable=False, default="medium")
@@ -35,6 +36,7 @@ class LearningItemModel(Base):
     __tablename__ = "learning_items"
 
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(240), nullable=False)
     area: Mapped[str] = mapped_column(String(160), nullable=False, default="General")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="queued")
@@ -48,6 +50,7 @@ class NoteModel(Base):
     __tablename__ = "notes"
 
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(240), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False, default="")
     category: Mapped[str] = mapped_column(String(120), nullable=False, default="General")
@@ -59,6 +62,7 @@ class GoalModel(Base):
     __tablename__ = "goals"
 
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(240), nullable=False)
     progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="planned")

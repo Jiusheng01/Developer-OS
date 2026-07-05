@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 
-def test_note_crud_flow(client: TestClient) -> None:
+def test_note_crud_flow(client: TestClient, auth_headers: dict[str, str]) -> None:
     create_response = client.post(
         "/api/v1/notes",
         json={
@@ -10,6 +10,7 @@ def test_note_crud_flow(client: TestClient) -> None:
             "category": " Architecture ",
             "tags": [" api ", "api", "v2"],
         },
+        headers=auth_headers,
     )
     assert create_response.status_code == 201
     created = create_response.json()
@@ -20,7 +21,7 @@ def test_note_crud_flow(client: TestClient) -> None:
     assert created["tags"] == ["api", "v2"]
     assert isinstance(created["updatedAt"], str)
 
-    list_response = client.get("/api/v1/notes")
+    list_response = client.get("/api/v1/notes", headers=auth_headers)
     assert list_response.status_code == 200
     assert [note["id"] for note in list_response.json()] == [created["id"]]
 
@@ -31,6 +32,7 @@ def test_note_crud_flow(client: TestClient) -> None:
             "category": "   ",
             "tags": [" local ", "local", "api"],
         },
+        headers=auth_headers,
     )
     assert update_response.status_code == 200
     updated = update_response.json()
@@ -38,13 +40,13 @@ def test_note_crud_flow(client: TestClient) -> None:
     assert updated["category"] == "General"
     assert updated["tags"] == ["local", "api"]
 
-    delete_response = client.delete(f"/api/v1/notes/{created['id']}")
+    delete_response = client.delete(f"/api/v1/notes/{created['id']}", headers=auth_headers)
     assert delete_response.status_code == 204
-    assert client.get("/api/v1/notes").json() == []
+    assert client.get("/api/v1/notes", headers=auth_headers).json() == []
 
 
-def test_note_defaults_and_validation(client: TestClient) -> None:
-    response = client.post("/api/v1/notes", json={"title": "MCP"})
+def test_note_defaults_and_validation(client: TestClient, auth_headers: dict[str, str]) -> None:
+    response = client.post("/api/v1/notes", json={"title": "MCP"}, headers=auth_headers)
 
     assert response.status_code == 201
     created = response.json()
@@ -52,13 +54,13 @@ def test_note_defaults_and_validation(client: TestClient) -> None:
     assert created["category"] == "General"
     assert created["tags"] == []
 
-    blank_response = client.post("/api/v1/notes", json={"title": "   "})
+    blank_response = client.post("/api/v1/notes", json={"title": "   "}, headers=auth_headers)
     assert blank_response.status_code == 400
     assert blank_response.json()["detail"] == "title is required"
 
 
-def test_missing_note_returns_404(client: TestClient) -> None:
-    response = client.patch("/api/v1/notes/missing", json={"body": "later"})
+def test_missing_note_returns_404(client: TestClient, auth_headers: dict[str, str]) -> None:
+    response = client.patch("/api/v1/notes/missing", json={"body": "later"}, headers=auth_headers)
 
     assert response.status_code == 404
     assert response.json()["detail"] == {"resource": "note", "id": "missing"}

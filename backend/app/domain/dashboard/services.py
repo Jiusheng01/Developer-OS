@@ -89,13 +89,14 @@ class DashboardService:
         self._notes = notes
         self._goals = goals
 
-    def list_todos(self) -> Sequence[Todo]:
-        return self._todos.list_todos()
+    def list_todos(self, user_id: str) -> Sequence[Todo]:
+        return self._todos.list_todos(user_id)
 
-    def create_todo(self, data: Mapping[str, object]) -> Todo:
+    def create_todo(self, user_id: str, data: Mapping[str, object]) -> Todo:
         now = _now()
         todo = Todo(
             id=_make_id("todo"),
+            user_id=user_id,
             title=_clean_required(data.get("title"), "title"),
             done=False,
             priority=as_todo_priority(data.get("priority")),
@@ -104,9 +105,9 @@ class DashboardService:
             created_at=now,
             updated_at=now,
         )
-        return self._todos.create_todo(todo)
+        return self._todos.create_todo(user_id, todo)
 
-    def update_todo(self, todo_id: str, data: Mapping[str, object]) -> Todo:
+    def update_todo(self, user_id: str, todo_id: str, data: Mapping[str, object]) -> Todo:
         changes: dict[str, object] = {"updated_at": _now()}
         if "title" in data:
             changes["title"] = _clean_required(data["title"], "title")
@@ -118,21 +119,22 @@ class DashboardService:
             changes["tags"] = _clean_tags(data["tags"])
         if "due_date" in data:
             changes["due_date"] = _clean_optional(data["due_date"])
-        todo = self._todos.update_todo(todo_id, changes)
+        todo = self._todos.update_todo(user_id, todo_id, changes)
         if todo is None:
             raise ResourceNotFoundError("todo", todo_id)
         return todo
 
-    def delete_todo(self, todo_id: str) -> None:
-        if not self._todos.delete_todo(todo_id):
+    def delete_todo(self, user_id: str, todo_id: str) -> None:
+        if not self._todos.delete_todo(user_id, todo_id):
             raise ResourceNotFoundError("todo", todo_id)
 
-    def list_learning_items(self) -> Sequence[LearningItem]:
-        return self._learning.list_learning_items()
+    def list_learning_items(self, user_id: str) -> Sequence[LearningItem]:
+        return self._learning.list_learning_items(user_id)
 
-    def create_learning_item(self, data: Mapping[str, object]) -> LearningItem:
+    def create_learning_item(self, user_id: str, data: Mapping[str, object]) -> LearningItem:
         item = LearningItem(
             id=_make_id("learning"),
+            user_id=user_id,
             title=_clean_required(data.get("title"), "title"),
             area=_clean_defaulted(data.get("area", "General"), "General"),
             status=as_learning_status(data.get("status")),
@@ -141,9 +143,9 @@ class DashboardService:
             tags=_clean_tags(data.get("tags")),
             updated_at=_now(),
         )
-        return self._learning.create_learning_item(item)
+        return self._learning.create_learning_item(user_id, item)
 
-    def update_learning_item(self, item_id: str, data: Mapping[str, object]) -> LearningItem:
+    def update_learning_item(self, user_id: str, item_id: str, data: Mapping[str, object]) -> LearningItem:
         changes: dict[str, object] = {"updated_at": _now()}
         if "title" in data:
             changes["title"] = _clean_required(data["title"], "title")
@@ -157,30 +159,31 @@ class DashboardService:
             changes["notes"] = str(data["notes"] or "")
         if "tags" in data:
             changes["tags"] = _clean_tags(data["tags"])
-        item = self._learning.update_learning_item(item_id, changes)
+        item = self._learning.update_learning_item(user_id, item_id, changes)
         if item is None:
             raise ResourceNotFoundError("learning item", item_id)
         return item
 
-    def delete_learning_item(self, item_id: str) -> None:
-        if not self._learning.delete_learning_item(item_id):
+    def delete_learning_item(self, user_id: str, item_id: str) -> None:
+        if not self._learning.delete_learning_item(user_id, item_id):
             raise ResourceNotFoundError("learning item", item_id)
 
-    def list_notes(self) -> Sequence[Note]:
-        return self._notes.list_notes()
+    def list_notes(self, user_id: str) -> Sequence[Note]:
+        return self._notes.list_notes(user_id)
 
-    def create_note(self, data: Mapping[str, object]) -> Note:
+    def create_note(self, user_id: str, data: Mapping[str, object]) -> Note:
         note = Note(
             id=_make_id("note"),
+            user_id=user_id,
             title=_clean_required(data.get("title"), "title"),
             body=str(data.get("body") or ""),
             category=_clean_defaulted(data.get("category", "General"), "General"),
             tags=_clean_tags(data.get("tags")),
             updated_at=_now(),
         )
-        return self._notes.create_note(note)
+        return self._notes.create_note(user_id, note)
 
-    def update_note(self, note_id: str, data: Mapping[str, object]) -> Note:
+    def update_note(self, user_id: str, note_id: str, data: Mapping[str, object]) -> Note:
         changes: dict[str, object] = {"updated_at": _now()}
         if "title" in data:
             changes["title"] = _clean_required(data["title"], "title")
@@ -190,30 +193,31 @@ class DashboardService:
             changes["category"] = _clean_defaulted(data["category"], "General")
         if "tags" in data:
             changes["tags"] = _clean_tags(data["tags"])
-        note = self._notes.update_note(note_id, changes)
+        note = self._notes.update_note(user_id, note_id, changes)
         if note is None:
             raise ResourceNotFoundError("note", note_id)
         return note
 
-    def delete_note(self, note_id: str) -> None:
-        if not self._notes.delete_note(note_id):
+    def delete_note(self, user_id: str, note_id: str) -> None:
+        if not self._notes.delete_note(user_id, note_id):
             raise ResourceNotFoundError("note", note_id)
 
-    def list_goals(self) -> Sequence[Goal]:
-        return self._goals.list_goals()
+    def list_goals(self, user_id: str) -> Sequence[Goal]:
+        return self._goals.list_goals(user_id)
 
-    def create_goal(self, data: Mapping[str, object]) -> Goal:
+    def create_goal(self, user_id: str, data: Mapping[str, object]) -> Goal:
         goal = Goal(
             id=_make_id("goal"),
+            user_id=user_id,
             title=_clean_required(data.get("title"), "title"),
             progress=_clean_progress(data.get("progress", 0)),
             status=as_goal_status(data.get("status")),
             target_year=_clean_optional(data.get("target_year")),
             tasks=[],
         )
-        return self._goals.create_goal(goal)
+        return self._goals.create_goal(user_id, goal)
 
-    def update_goal(self, goal_id: str, data: Mapping[str, object]) -> Goal:
+    def update_goal(self, user_id: str, goal_id: str, data: Mapping[str, object]) -> Goal:
         changes: dict[str, object] = {}
         if "title" in data:
             changes["title"] = _clean_required(data["title"], "title")
@@ -223,38 +227,38 @@ class DashboardService:
             changes["status"] = as_goal_status(data["status"])
         if "target_year" in data:
             changes["target_year"] = _clean_optional(data["target_year"])
-        goal = self._goals.update_goal(goal_id, changes)
+        goal = self._goals.update_goal(user_id, goal_id, changes)
         if goal is None:
             raise ResourceNotFoundError("goal", goal_id)
         return goal
 
-    def delete_goal(self, goal_id: str) -> None:
-        if not self._goals.delete_goal(goal_id):
+    def delete_goal(self, user_id: str, goal_id: str) -> None:
+        if not self._goals.delete_goal(user_id, goal_id):
             raise ResourceNotFoundError("goal", goal_id)
 
-    def create_goal_task(self, goal_id: str, data: Mapping[str, object]) -> GoalTask:
+    def create_goal_task(self, user_id: str, goal_id: str, data: Mapping[str, object]) -> GoalTask:
         task = GoalTask(
             id=_make_id("goal-task"),
             goal_id=goal_id,
             title=_clean_required(data.get("title"), "title"),
             done=False,
         )
-        created = self._goals.create_goal_task(task)
+        created = self._goals.create_goal_task(user_id, task)
         if created is None:
             raise ResourceNotFoundError("goal", goal_id)
         return created
 
-    def update_goal_task(self, goal_id: str, task_id: str, data: Mapping[str, object]) -> GoalTask:
+    def update_goal_task(self, user_id: str, goal_id: str, task_id: str, data: Mapping[str, object]) -> GoalTask:
         changes: dict[str, object] = {}
         if "title" in data:
             changes["title"] = _clean_required(data["title"], "title")
         if "done" in data:
             changes["done"] = data["done"]
-        task = self._goals.update_goal_task(goal_id, task_id, changes)
+        task = self._goals.update_goal_task(user_id, goal_id, task_id, changes)
         if task is None:
             raise ResourceNotFoundError("goal task", task_id)
         return task
 
-    def delete_goal_task(self, goal_id: str, task_id: str) -> None:
-        if not self._goals.delete_goal_task(goal_id, task_id):
+    def delete_goal_task(self, user_id: str, goal_id: str, task_id: str) -> None:
+        if not self._goals.delete_goal_task(user_id, goal_id, task_id):
             raise ResourceNotFoundError("goal task", task_id)

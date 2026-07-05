@@ -1,6 +1,9 @@
 param(
     [string] $ApiBaseUrl = "http://127.0.0.1:8000/api/v1",
-    [int] $TimeoutSec = 10
+    [int] $TimeoutSec = 10,
+    [string] $Email = "smoke@example.com",
+    [string] $Username = "smoke_user",
+    [string] $Password = "smoke-password"
 )
 
 Set-StrictMode -Version Latest
@@ -8,6 +11,7 @@ $ErrorActionPreference = "Stop"
 
 $script:BaseUrl = $ApiBaseUrl.TrimEnd("/")
 $script:RequestTimeoutSec = $TimeoutSec
+$script:AuthToken = $null
 $created = @{
     todo = $null
     learning = $null
@@ -41,12 +45,57 @@ function Invoke-ApiJson {
         Headers = @{ Accept = "application/json" }
     }
 
+    if ($script:AuthToken) {
+        $parameters.Headers.Authorization = "Bearer $script:AuthToken"
+    }
+
     if ($null -ne $Body) {
         $parameters.ContentType = "application/json"
         $parameters.Body = ConvertTo-RequestJson -Value $Body
     }
 
     return Invoke-RestMethod @parameters
+}
+
+function Get-StatusCode {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object] $ErrorRecord
+    )
+
+    $response = $ErrorRecord.Exception.Response
+    if ($null -eq $response) {
+        return $null
+    }
+
+    return [int] $response.StatusCode
+}
+
+function Initialize-SmokeAuth {
+    $registerBody = @{
+        email = $Email
+        username = $Username
+        password = $Password
+        displayName = "Smoke User"
+    }
+
+    try {
+        Invoke-ApiJson -Method "POST" -Path "/auth/register" -Body $registerBody | Out-Null
+    } catch {
+        $statusCode = Get-StatusCode -ErrorRecord $_
+        if ($statusCode -ne 409) {
+            throw
+        }
+    }
+
+    $login = Invoke-ApiJson -Method "POST" -Path "/auth/login" -Body @{
+        identifier = $Email
+        password = $Password
+    }
+    $script:AuthToken = $login.accessToken
+    if (-not $script:AuthToken) {
+        throw "Auth smoke setup failed: login did not return accessToken."
+    }
 }
 
 function Assert-Equal {
@@ -95,6 +144,8 @@ try {
 
     $health = Invoke-ApiJson -Method "GET" -Path "/health"
     Assert-Equal -Actual $health.status -Expected "ok" -Message "Health check failed."
+
+    Initialize-SmokeAuth
 
     $todo = Invoke-ApiJson -Method "POST" -Path "/todos" -Body @{
         title = "smoke todo $suffix"

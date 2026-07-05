@@ -29,7 +29,7 @@ V3.0 keeps the public site static-data driven and adds migration-backed database
 - Notes
 - Goals and goal tasks
 
-The backend still defaults to SQLite and now uses Alembic as the schema source of truth. Set `DEVELOPER_OS_DATABASE_URL` to switch to a local PostgreSQL database. V3 does not introduce Docker. V3.1 adds JWT auth and public registration; user-scoped Dashboard data and frontend auth continue in V3.2-V3.3.
+The backend still defaults to SQLite and now uses Alembic as the schema source of truth. Set `DEVELOPER_OS_DATABASE_URL` to switch to a local PostgreSQL database. V3 does not introduce Docker. V3.1 adds JWT auth and public registration; V3.2 scopes Dashboard business APIs to the current user. Frontend auth continues in V3.3.
 
 Passcode, theme, locale, and active tab remain browser-local.
 
@@ -85,7 +85,7 @@ POST /api/v1/auth/login
 GET  /api/v1/auth/me
 ```
 
-Public registration is enabled by default and can be disabled with `DEVELOPER_OS_PUBLIC_REGISTRATION_ENABLED=false`. Configure the JWT signing secret with `DEVELOPER_OS_JWT_SECRET_KEY`.
+Public registration is enabled by default and can be disabled with `DEVELOPER_OS_PUBLIC_REGISTRATION_ENABLED=false`. Configure the JWT signing secret with `DEVELOPER_OS_JWT_SECRET_KEY`. After V3.2, Todo, Learning, Notes, Goals, and Goal Task APIs require a bearer token.
 
 ## Recommended Development Scripts
 
@@ -121,11 +121,13 @@ Run database migrations:
 .\scripts\migrate-api-db.ps1
 ```
 
-Run a safe API CRUD smoke. This creates temporary smoke records for Todo, Learning, Notes, Goals, and Goal Tasks, then deletes them:
+Run a safe API CRUD smoke. It registers or logs in a smoke user, creates temporary Todo, Learning, Notes, Goals, and Goal Task records for that user, then deletes them:
 
 ```powershell
 .\scripts\smoke-api-crud.ps1
 ```
+
+After V3.2, frontend API mode requires auth state. The login/register UI lands in V3.3; until then, use localStorage mode for daily browser use.
 
 Reset the local SQLite API database. This is intentionally explicit and destructive:
 

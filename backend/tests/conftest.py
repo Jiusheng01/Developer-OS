@@ -48,3 +48,32 @@ def client(tmp_path: Path) -> Generator[TestClient, None, None]:
 
     with TestClient(app) as test_client:
         yield test_client
+
+
+def create_auth_headers(client: TestClient, *, suffix: str = "primary") -> dict[str, str]:
+    email = f"{suffix}@example.com"
+    username = f"{suffix}_user"
+    password = "strong-password"
+    register_response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": email,
+            "username": username,
+            "password": password,
+            "displayName": suffix.title(),
+        },
+    )
+    assert register_response.status_code == 201
+    login_response = client.post("/api/v1/auth/login", json={"identifier": email, "password": password})
+    assert login_response.status_code == 200
+    return {"Authorization": f"Bearer {login_response.json()['accessToken']}"}
+
+
+@pytest.fixture
+def auth_headers(client: TestClient) -> dict[str, str]:
+    return create_auth_headers(client, suffix="primary")
+
+
+@pytest.fixture
+def other_auth_headers(client: TestClient) -> dict[str, str]:
+    return create_auth_headers(client, suffix="secondary")

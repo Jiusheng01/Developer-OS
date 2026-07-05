@@ -4,14 +4,14 @@ FastAPI backend for Developer OS V3.
 
 ## Scope
 
-V3 persists Dashboard business data with FastAPI, SQLAlchemy, SQLite by default, Alembic-managed migrations, and JWT authentication:
+V3 persists Dashboard business data with FastAPI, SQLAlchemy, SQLite by default, Alembic-managed migrations, JWT authentication, and user-scoped Dashboard APIs:
 
 - Todo
 - Learning items
 - Notes
 - Goals and goal tasks
 
-Local passcode, theme, language, and active tab remain browser-local. PostgreSQL is supported through `DEVELOPER_OS_DATABASE_URL`. Docker is intentionally out of scope for V3. User-scoped Dashboard data and frontend auth continue in V3.2-V3.3.
+Local passcode, theme, language, and active tab remain browser-local. PostgreSQL is supported through `DEVELOPER_OS_DATABASE_URL`. Docker is intentionally out of scope for V3. Frontend auth continues in V3.3.
 
 ## Setup
 
@@ -74,6 +74,12 @@ API CRUD smoke:
 .\scripts\smoke-api-crud.ps1
 ```
 
+The CRUD smoke registers or logs in a smoke user before calling protected Dashboard endpoints. Override the smoke account when needed:
+
+```powershell
+.\scripts\smoke-api-crud.ps1 -Email "smoke@example.com" -Username "smoke_user" -Password "smoke-password"
+```
+
 ## Auth API
 
 Registration status:
@@ -111,6 +117,26 @@ GET /api/v1/auth/me
 Authorization: Bearer <accessToken>
 ```
 
+## Dashboard API Auth
+
+Starting in V3.2, Dashboard business endpoints require:
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+Protected resources:
+
+```text
+/api/v1/todos
+/api/v1/learning-items
+/api/v1/notes
+/api/v1/goals
+/api/v1/goals/{goalId}/tasks
+```
+
+Each list, create, update, and delete operation is scoped to the current token user. Cross-user access returns the same not-found contract as a missing resource.
+
 The default SQLite database path is:
 
 ```text
@@ -146,7 +172,7 @@ npm run lint --prefix frontend
 npm run build --prefix frontend
 ```
 
-The backend test suite covers health, auth registration/login/current-user behavior, migrations, plus Dashboard CRUD behavior for Todo, Learning items, Notes, Goals, and nested goal tasks.
+The backend test suite covers health, auth registration/login/current-user behavior, migrations, Dashboard CRUD behavior, and cross-user isolation for Todo, Learning items, Notes, Goals, and nested goal tasks.
 
 ## Migrations
 

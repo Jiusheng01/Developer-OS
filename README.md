@@ -29,7 +29,7 @@ V3.0 保持公开站点由静态结构化数据驱动，同时为工作台业务
 - 笔记
 - 目标和目标拆解任务
 
-后端默认仍使用 SQLite，并通过 Alembic 管理 schema；需要时可通过 `DEVELOPER_OS_DATABASE_URL` 切换到本机 PostgreSQL。V3 暂不引入 Docker。V3.1 已加入 JWT 认证和公开注册；Dashboard 用户数据隔离和前端登录体验会在 V3.2-V3.3 继续实现。
+后端默认仍使用 SQLite，并通过 Alembic 管理 schema；需要时可通过 `DEVELOPER_OS_DATABASE_URL` 切换到本机 PostgreSQL。V3 暂不引入 Docker。V3.1 已加入 JWT 认证和公开注册；V3.2 已让 Dashboard 业务 API 按当前用户隔离。前端登录体验会在 V3.3 继续实现。
 
 本地口令、主题、语言和当前标签页仍然保存在浏览器本地。
 
@@ -85,7 +85,7 @@ POST /api/v1/auth/login
 GET  /api/v1/auth/me
 ```
 
-公开注册默认开启，可通过 `DEVELOPER_OS_PUBLIC_REGISTRATION_ENABLED=false` 关闭。JWT 密钥通过 `DEVELOPER_OS_JWT_SECRET_KEY` 配置。
+公开注册默认开启，可通过 `DEVELOPER_OS_PUBLIC_REGISTRATION_ENABLED=false` 关闭。JWT 密钥通过 `DEVELOPER_OS_JWT_SECRET_KEY` 配置。V3.2 后，待办事项、学习项、笔记、目标等业务 API 都需要 Bearer token。
 
 ## 推荐开发脚本
 
@@ -121,11 +121,13 @@ GET  /api/v1/auth/me
 .\scripts\migrate-api-db.ps1
 ```
 
-运行安全的后端接口增删改查冒烟检查。它会为待办事项、学习项、笔记、目标和目标拆解任务创建临时检查数据，然后删除这些临时数据：
+运行安全的后端接口增删改查冒烟检查。它会先注册或登录一个 smoke 用户，再为该用户创建待办事项、学习项、笔记、目标和目标拆解任务的临时检查数据，然后删除这些临时数据：
 
 ```powershell
 .\scripts\smoke-api-crud.ps1
 ```
+
+V3.2 后，前端 API 模式需要登录态。前端登录/注册 UI 会在 V3.3 补齐；在此之前，日常使用优先启动浏览器本地存储模式。
 
 重置本地 SQLite 后端数据库。该操作是显式且具有破坏性的：
 
