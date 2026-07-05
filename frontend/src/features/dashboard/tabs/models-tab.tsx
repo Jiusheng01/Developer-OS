@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { Boxes, CheckCircle2, KeyRound, Plus, Power, RadioTower, Star, Trash2 } from "lucide-react";
+import { Boxes, CheckCircle2, KeyRound, Pencil, Plus, Power, RadioTower, Save, Star, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import {
   testAIProvider,
   updateAIProvider,
 } from "@/features/ai/data/ai-api";
-import type { AIProviderConfig } from "@/features/ai/data/types";
+import type { AIProviderConfig, AIProviderPatch } from "@/features/ai/data/types";
 import { DashboardEmptyState } from "@/features/dashboard/components/dashboard-empty-state";
 import { DashboardPanelMotion } from "@/features/dashboard/components/dashboard-motion";
 import { DashboardSection } from "@/features/dashboard/components/dashboard-section";
@@ -34,6 +34,11 @@ export function ModelsTab() {
   const [saving, setSaving] = useState(false);
   const [updatingProviderId, setUpdatingProviderId] = useState<string | undefined>();
   const [testingProviderId, setTestingProviderId] = useState<string | undefined>();
+  const [editingProviderId, setEditingProviderId] = useState<string | undefined>();
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [editBaseUrl, setEditBaseUrl] = useState("");
+  const [editModel, setEditModel] = useState("");
+  const [editApiKey, setEditApiKey] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -79,6 +84,54 @@ export function ModelsTab() {
       setError(getApiErrorMessage(requestError, "AI provider request failed"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  function startEditing(provider: AIProviderConfig) {
+    setError("");
+    setMessage("");
+    setEditingProviderId(provider.id);
+    setEditDisplayName(provider.displayName);
+    setEditBaseUrl(provider.baseUrl);
+    setEditModel(provider.model);
+    setEditApiKey("");
+  }
+
+  function cancelEditing() {
+    setEditingProviderId(undefined);
+    setEditDisplayName("");
+    setEditBaseUrl("");
+    setEditModel("");
+    setEditApiKey("");
+  }
+
+  async function handleSaveEdit(providerId: string) {
+    if (!editDisplayName.trim() || !editBaseUrl.trim() || !editModel.trim()) {
+      setError(t.editRequired);
+      return;
+    }
+
+    const patch: AIProviderPatch = {
+      displayName: editDisplayName.trim(),
+      baseUrl: editBaseUrl.trim(),
+      model: editModel.trim(),
+    };
+    if (editApiKey.trim()) {
+      patch.apiKey = editApiKey.trim();
+    }
+
+    setError("");
+    setMessage("");
+    setUpdatingProviderId(providerId);
+    try {
+      const updated = await updateAIProvider(providerId, patch);
+      setProviders((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      cancelEditing();
+      setMessage(t.updated);
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "AI provider request failed"));
+    } finally {
+      setUpdatingProviderId(undefined);
     }
   }
 
@@ -164,41 +217,77 @@ export function ModelsTab() {
       <DashboardSection title={t.providers} description={t.providersDescription} icon={KeyRound} contentClassName="grid gap-3">
         {loading ? <DashboardEmptyState title={t.loading} icon={Boxes} /> : null}
         {!loading && providers.length === 0 ? <DashboardEmptyState title={t.emptyTitle} description={t.emptyDescription} icon={Boxes} /> : null}
-        {providers.map((provider) => (
-          <div key={provider.id} className="rounded-md border bg-background/70 p-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-medium">{provider.displayName}</p>
-                  {provider.isDefault ? <Badge>{t.default}</Badge> : null}
-                  <Badge variant={provider.enabled ? "secondary" : "outline"}>{provider.enabled ? t.enabled : t.disabled}</Badge>
+        {providers.map((provider) => {
+          const editing = editingProviderId === provider.id;
+          const busy = updatingProviderId === provider.id || testingProviderId === provider.id;
+
+          return (
+            <div key={provider.id} className="rounded-md border bg-background/70 p-4">
+              {editing ? (
+                <form
+                  className="grid gap-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void handleSaveEdit(provider.id);
+                  }}
+                >
+                  <div className="grid gap-3 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.8fr)]">
+                    <Input value={editDisplayName} onChange={(event) => setEditDisplayName(event.target.value)} placeholder={t.displayName} aria-label={t.displayName} />
+                    <Input value={editBaseUrl} onChange={(event) => setEditBaseUrl(event.target.value)} placeholder={t.baseUrl} aria-label={t.baseUrl} />
+                    <Input value={editModel} onChange={(event) => setEditModel(event.target.value)} placeholder={t.model} aria-label={t.model} />
+                    <Input value={editApiKey} onChange={(event) => setEditApiKey(event.target.value)} type="password" placeholder={t.apiKeyOptional} aria-label={t.apiKeyOptional} />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="submit" size="sm" disabled={busy}>
+                      <Save className="h-4 w-4" />
+                      {t.save}
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={cancelEditing} disabled={busy}>
+                      <X className="h-4 w-4" />
+                      {t.cancel}
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{provider.displayName}</p>
+                      {provider.isDefault ? <Badge>{t.default}</Badge> : null}
+                      <Badge variant={provider.enabled ? "secondary" : "outline"}>{provider.enabled ? t.enabled : t.disabled}</Badge>
+                    </div>
+                    <p className="mt-2 truncate text-sm text-muted-foreground">{provider.baseUrl}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t.model}: {provider.model} · {provider.hasApiKey ? t.keyStored : t.keyMissing}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="outline" onClick={() => startEditing(provider)} disabled={busy}>
+                      <Pencil className="h-4 w-4" />
+                      {t.edit}
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => void handleSetDefault(provider.id)} disabled={provider.isDefault || busy}>
+                      <Star className="h-4 w-4" />
+                      {t.setDefault}
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => void handleTestProvider(provider.id)} disabled={busy || !provider.enabled}>
+                      <RadioTower className="h-4 w-4" />
+                      {testingProviderId === provider.id ? t.testing : t.test}
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => void handleToggle(provider)} disabled={busy}>
+                      {provider.enabled ? <Power className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                      {provider.enabled ? t.disable : t.enable}
+                    </Button>
+                    <Button type="button" size="sm" variant="destructive" onClick={() => void handleDelete(provider.id)} disabled={busy}>
+                      <Trash2 className="h-4 w-4" />
+                      {t.delete}
+                    </Button>
+                  </div>
                 </div>
-                <p className="mt-2 truncate text-sm text-muted-foreground">{provider.baseUrl}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {t.model}: {provider.model} · {provider.hasApiKey ? t.keyStored : t.keyMissing}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" variant="outline" onClick={() => void handleSetDefault(provider.id)} disabled={provider.isDefault || updatingProviderId === provider.id}>
-                  <Star className="h-4 w-4" />
-                  {t.setDefault}
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => void handleTestProvider(provider.id)} disabled={testingProviderId === provider.id || updatingProviderId === provider.id || !provider.enabled}>
-                  <RadioTower className="h-4 w-4" />
-                  {testingProviderId === provider.id ? t.testing : t.test}
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => void handleToggle(provider)} disabled={updatingProviderId === provider.id}>
-                  {provider.enabled ? <Power className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                  {provider.enabled ? t.disable : t.enable}
-                </Button>
-                <Button type="button" size="sm" variant="destructive" onClick={() => void handleDelete(provider.id)} disabled={updatingProviderId === provider.id}>
-                  <Trash2 className="h-4 w-4" />
-                  {t.delete}
-                </Button>
-              </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </DashboardSection>
     </div>
   );
