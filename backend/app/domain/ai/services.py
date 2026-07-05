@@ -1,5 +1,6 @@
 from collections.abc import Mapping, Sequence
-from datetime import UTC, datetime
+import json
+from datetime import UTC, date, datetime
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -125,6 +126,15 @@ def _clean_plan_text(value: object, fallback: str) -> str:
     return fallback
 
 
+def _clean_plan_required_text(value: object, field_name: str) -> str:
+    if not isinstance(value, str):
+        raise ValidationError(f"{field_name} must be a string")
+    trimmed = value.strip()
+    if not trimmed:
+        raise ValidationError(f"{field_name} is required")
+    return trimmed
+
+
 def _clean_plan_tags(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
@@ -135,6 +145,17 @@ def _clean_progress(value: object) -> int:
     if not isinstance(value, int):
         return 0
     return min(100, max(0, value))
+
+
+def _clean_plan_due_date(value: object) -> str | None:
+    due_date = _clean_optional(value)
+    if due_date is None:
+        return None
+    try:
+        date.fromisoformat(due_date)
+    except ValueError as exc:
+        raise ValidationError("dueDate must use YYYY-MM-DD format") from exc
+    return due_date
 
 
 class AIProviderService:
@@ -342,7 +363,8 @@ class AIPlannerService:
 def _planner_system_prompt() -> str:
     return (
         "You are an AI learning planner. Return only valid JSON. "
-        "Plan for execution, not chat. Do not include markdown fences."
+        "Plan for execution, not chat. Do not include markdown fences. "
+        "Every item title must be specific and non-empty."
     )
 
 
@@ -350,12 +372,28 @@ def _planner_user_prompt(goal: LearningGoalInput) -> str:
     stack = ", ".join(goal.preferred_stack) if goal.preferred_stack else "not specified"
     deadline = goal.deadline or "not specified"
     constraints = goal.constraints or "none"
+    schema = {
+        "title": "string",
+        "summary": "string",
+        "goals": [{"title": "string", "targetYear": "YYYY or null"}],
+        "learningItems": [
+            {
+                "title": "string",
+                "area": "string",
+                "status": "queued|active|review|done",
+                "progress": "integer 0-100",
+                "notes": "string",
+                "tags": ["string"],
+            }
+        ],
+        "todos": [{"title": "string", "priority": "low|medium|high", "dueDate": "YYYY-MM-DD or null", "tags": ["string"]}],
+        "notePrompts": [{"title": "string", "category": "string", "prompt": "string", "tags": ["string"]}],
+    }
     return (
-        "Create an executable learning plan with this JSON shape: "
-        "{title, summary, goals:[{title,targetYear}], "
-        "learningItems:[{title,area,status,progress,notes,tags}], "
-        "todos:[{title,priority,dueDate,tags}], "
-        "notePrompts:[{title,category,prompt,tags}]}. "
+        "Create an executable learning plan. Return exactly one JSON object matching this schema: "
+        f"{json.dumps(schema, ensure_ascii=False)}. "
+        "Rules: include at least one goal, roadmap item, or todo; use ISO dates for dueDate; "
+        "keep every item title actionable and non-empty. "
         f"Target: {goal.target}. Current level: {goal.current_level}. "
         f"Deadline: {deadline}. Weekly hours: {goal.weekly_hours}. "
         f"Preferred stack: {stack}. Constraints: {constraints}."
@@ -367,14 +405,14 @@ def _plan_draft_from_payload(user_id: str, payload: Mapping[str, object]) -> Lea
     summary = _clean_plan_text(payload.get("summary"), "")
     goals = [
         PlanGoal(
-            title=_clean_plan_text(item.get("title"), "Learning goal"),
+            title=_clean_plan_required_text(item.get("title"), "goal title"),
             target_year=_clean_optional(item.get("targetYear") or item.get("target_year")),
         )
         for item in _as_record_list(payload.get("goals"), "goals")
     ]
     learning_items = [
         PlanLearningItem(
-            title=_clean_plan_text(item.get("title"), "Learning item"),
+            title=_clean_plan_required_text(item.get("title"), "learning item title"),
             area=_clean_plan_text(item.get("area"), "AI Learning"),
             status=str(item.get("status")) if item.get("status") in LEARNING_STATUSES else "queued",
             progress=_clean_progress(item.get("progress")),
@@ -385,18 +423,18 @@ def _plan_draft_from_payload(user_id: str, payload: Mapping[str, object]) -> Lea
     ]
     todos = [
         PlanTodo(
-            title=_clean_plan_text(item.get("title"), "Learning task"),
+            title=_clean_plan_required_text(item.get("title"), "todo title"),
             priority=str(item.get("priority")) if item.get("priority") in TODO_PRIORITIES else "medium",
-            due_date=_clean_optional(item.get("dueDate") or item.get("due_date")),
+            due_date=_clean_plan_due_date(item.get("dueDate") or item.get("due_date")),
             tags=_clean_plan_tags(item.get("tags")),
         )
         for item in _as_record_list(payload.get("todos"), "todos")
     ]
     note_prompts = [
         PlanNotePrompt(
-            title=_clean_plan_text(item.get("title"), "Learning reflection"),
+            title=_clean_plan_required_text(item.get("title"), "note prompt title"),
             category=_clean_plan_text(item.get("category"), "Learning"),
-            prompt=_clean_plan_text(item.get("prompt"), ""),
+            prompt=_clean_plan_required_text(item.get("prompt"), "note prompt"),
             tags=_clean_plan_tags(item.get("tags")),
         )
         for item in _as_record_list(payload.get("notePrompts") or payload.get("note_prompts"), "notePrompts")

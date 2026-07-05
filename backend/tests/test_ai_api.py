@@ -47,10 +47,29 @@ class FakeProviderTestProvider:
         return {"status": "ok"}
 
 
+class InvalidPlannerProvider:
+    def generate_json(self, request: LLMJsonRequest) -> dict[str, object]:
+        assert "Every item title" in request.system_prompt
+        return {
+            "title": "Invalid AI Plan",
+            "summary": "This should be rejected before persistence.",
+            "goals": [{"title": "   "}],
+            "learningItems": [],
+            "todos": [],
+            "notePrompts": [],
+        }
+
+
 class FakePlannerProviderFactory:
     def create(self, config: AIProviderConfig) -> LLMProvider:
         assert config.provider_type == "openai_compatible"
         return FakePlannerProvider()
+
+
+class InvalidPlannerProviderFactory:
+    def create(self, config: AIProviderConfig) -> LLMProvider:
+        assert config.provider_type == "openai_compatible"
+        return InvalidPlannerProvider()
 
 
 class FakeProviderTestFactory:
@@ -91,6 +110,23 @@ def get_fake_planner_service(session: Session = Depends(get_db_session)) -> AIPl
 
 def get_fake_provider_service(session: Session = Depends(get_db_session)) -> AIProviderService:
     return AIProviderService(SQLAlchemyAIRepository(session), FakeProviderTestFactory())
+
+
+def get_invalid_planner_service(session: Session = Depends(get_db_session)) -> AIPlannerService:
+    ai_repository = SQLAlchemyAIRepository(session, auto_commit=False)
+    dashboard_repository = SQLAlchemyDashboardRepository(session, auto_commit=False)
+    dashboard_service = DashboardService(
+        dashboard_repository,
+        dashboard_repository,
+        dashboard_repository,
+        dashboard_repository,
+    )
+    return AIPlannerService(
+        ai_repository,
+        InvalidPlannerProviderFactory(),
+        dashboard_service,
+        SQLAlchemyUnitOfWork(session),
+    )
 
 
 def test_ai_providers_require_auth(client: TestClient) -> None:
@@ -222,6 +258,33 @@ def test_planner_generates_structured_draft_with_provider_boundary(
     assert draft["learningItems"][0]["title"] == "FastAPI service boundaries"
     assert draft["todos"][0]["priority"] == "high"
     assert draft["notePrompts"][0]["category"] == "Learning"
+
+
+def test_planner_rejects_invalid_structured_plan_without_persisting_draft(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    client.app.dependency_overrides[get_ai_planner_service] = get_invalid_planner_service
+    try:
+        assert client.post("/api/v1/ai/providers", json=provider_payload(), headers=auth_headers).status_code == 201
+        response = client.post(
+            "/api/v1/ai/planner/generate",
+            json={
+                "target": "Become an AI application developer",
+                "currentLevel": "Can build small Python apps",
+                "weeklyHours": 8,
+                "preferredStack": ["FastAPI", "PostgreSQL"],
+            },
+            headers=auth_headers,
+        )
+        draft_history_response = client.get("/api/v1/ai/planner/drafts", headers=auth_headers)
+    finally:
+        client.app.dependency_overrides.pop(get_ai_planner_service, None)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "goal title is required"
+    assert draft_history_response.status_code == 200
+    assert draft_history_response.json() == []
 
 
 def test_planner_commit_writes_draft_to_workspace_modules(
