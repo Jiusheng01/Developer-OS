@@ -21,6 +21,62 @@ import { DashboardStatusStrip } from "@/features/dashboard/components/dashboard-
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { copy } from "@/lib/i18n/copy";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { cn } from "@/lib/utils";
+
+const PROVIDER_PRESETS = [
+  {
+    id: "openai",
+    providerName: "OpenAI",
+    displayName: "OpenAI Planner",
+    baseUrl: "https://api.openai.com/v1",
+    model: "gpt-4.1-mini",
+  },
+  {
+    id: "deepseek",
+    providerName: "DeepSeek",
+    displayName: "DeepSeek Planner",
+    baseUrl: "https://api.deepseek.com",
+    model: "deepseek-chat",
+  },
+  {
+    id: "qwen",
+    providerName: "Qwen",
+    displayName: "Qwen Planner",
+    baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    model: "qwen-plus",
+  },
+  {
+    id: "doubao",
+    providerName: "Doubao",
+    displayName: "Doubao Planner",
+    baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+    model: "doubao-seed-1-6-250615",
+  },
+  {
+    id: "zhipu",
+    providerName: "Zhipu",
+    displayName: "Zhipu Planner",
+    baseUrl: "https://open.bigmodel.cn/api/paas/v4",
+    model: "glm-4-flash",
+  },
+  {
+    id: "openrouter",
+    providerName: "OpenRouter",
+    displayName: "OpenRouter Planner",
+    baseUrl: "https://openrouter.ai/api/v1",
+    model: "openai/gpt-4o-mini",
+  },
+  {
+    id: "ollama",
+    providerName: "Ollama",
+    displayName: "Ollama Local Planner",
+    baseUrl: "http://127.0.0.1:11434/v1",
+    model: "llama3.1",
+  },
+] as const;
+
+type ProviderPreset = (typeof PROVIDER_PRESETS)[number];
+type ProviderPresetId = ProviderPreset["id"];
 
 export function ModelsTab() {
   const { locale } = useLocale();
@@ -40,6 +96,7 @@ export function ModelsTab() {
   const [editBaseUrl, setEditBaseUrl] = useState("");
   const [editModel, setEditModel] = useState("");
   const [editApiKey, setEditApiKey] = useState("");
+  const [selectedPresetId, setSelectedPresetId] = useState<ProviderPresetId | undefined>();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -59,6 +116,15 @@ export function ModelsTab() {
       cancelled = true;
     };
   }, []);
+
+  function applyPreset(preset: ProviderPreset) {
+    setDisplayName(preset.displayName);
+    setBaseUrl(preset.baseUrl);
+    setModel(preset.model);
+    setSelectedPresetId(preset.id);
+    setError("");
+    setMessage(t.presetApplied.replace("{provider}", preset.providerName));
+  }
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -210,11 +276,74 @@ export function ModelsTab() {
   return (
     <div className="grid gap-5">
       <DashboardPanelMotion>
+        <DashboardSection title={t.presetsTitle} description={t.presetsDescription} icon={RadioTower} contentClassName="grid gap-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {PROVIDER_PRESETS.map((preset) => {
+              const selected = selectedPresetId === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => applyPreset(preset)}
+                  className={cn(
+                    "min-h-40 rounded-md border bg-background/70 p-3 text-left transition hover:border-primary/50 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    selected ? "border-primary bg-primary/10" : "border-border",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{preset.providerName}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{t.plannerChatModel}</p>
+                    </div>
+                    <Badge variant="outline">{t.openAICompatible}</Badge>
+                  </div>
+                  <p className="mt-3 min-h-10 text-xs leading-5 text-muted-foreground">{t.presetDescriptions[preset.id]}</p>
+                  <div className="mt-3 grid gap-1 text-xs">
+                    <p className="truncate text-foreground">
+                      <span className="text-muted-foreground">{t.model}: </span>
+                      {preset.model}
+                    </p>
+                    <p className="break-all text-muted-foreground">{preset.baseUrl}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs leading-5 text-muted-foreground">{t.presetsHint}</p>
+        </DashboardSection>
+      </DashboardPanelMotion>
+
+      <DashboardPanelMotion>
         <DashboardSection title={t.title} description={t.description} icon={Boxes}>
           <form className="grid gap-3 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto]" onSubmit={handleCreate}>
-            <Input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder={t.displayName} aria-label={t.displayName} />
-            <Input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} placeholder={t.baseUrl} aria-label={t.baseUrl} />
-            <Input value={model} onChange={(event) => setModel(event.target.value)} placeholder={t.model} aria-label={t.model} />
+            <Input
+              value={displayName}
+              onChange={(event) => {
+                setDisplayName(event.target.value);
+                setSelectedPresetId(undefined);
+              }}
+              placeholder={t.displayName}
+              aria-label={t.displayName}
+            />
+            <Input
+              value={baseUrl}
+              onChange={(event) => {
+                setBaseUrl(event.target.value);
+                setSelectedPresetId(undefined);
+              }}
+              placeholder={t.baseUrl}
+              aria-label={t.baseUrl}
+            />
+            <Input
+              value={model}
+              onChange={(event) => {
+                setModel(event.target.value);
+                setSelectedPresetId(undefined);
+              }}
+              placeholder={t.model}
+              aria-label={t.model}
+            />
             <Input value={apiKey} onChange={(event) => setApiKey(event.target.value)} type="password" placeholder={t.apiKey} aria-label={t.apiKey} />
             <Button type="submit" disabled={saving}>
               <Plus className="h-4 w-4" />
