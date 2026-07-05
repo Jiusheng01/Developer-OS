@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Response, status
 from app.api.deps import get_ai_provider_service, get_current_user
 from app.domain.ai.services import AIProviderService
 from app.domain.auth.entities import User
-from app.schemas.ai import AIProviderCreate, AIProviderRead, AIProviderUpdate
+from app.schemas.ai import AIProviderCreate, AIProviderRead, AIProviderTestResultRead, AIProviderUpdate
 
 router = APIRouter(prefix="/ai/providers", tags=["ai-providers"])
 
@@ -49,6 +49,16 @@ def set_default_ai_provider(
 ) -> AIProviderRead:
     config = service.set_default_provider_config(current_user.id, provider_id)
     return AIProviderRead.from_entity(config)
+
+
+@router.post("/{provider_id}/test", response_model=AIProviderTestResultRead)
+def test_ai_provider(
+    provider_id: str,
+    service: AIProviderService = Depends(get_ai_provider_service),
+    current_user: User = Depends(get_current_user),
+) -> AIProviderTestResultRead:
+    result = service.test_provider_config(current_user.id, provider_id)
+    return AIProviderTestResultRead.from_entity(result)
 
 
 @router.delete("/{provider_id}", status_code=status.HTTP_204_NO_CONTENT)

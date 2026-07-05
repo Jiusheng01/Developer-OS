@@ -6,6 +6,7 @@ from uuid import uuid4
 from app.core.errors import ResourceNotFoundError, ValidationError
 from app.domain.ai.entities import (
     AIProviderConfig,
+    AIProviderTestResult,
     AIProviderType,
     LLMJsonRequest,
     LearningGoalInput,
@@ -137,8 +138,9 @@ def _clean_progress(value: object) -> int:
 
 
 class AIProviderService:
-    def __init__(self, repository: AIRepository) -> None:
+    def __init__(self, repository: AIRepository, provider_factory: LLMProviderFactory | None = None) -> None:
         self._repository = repository
+        self._provider_factory = provider_factory
 
     def list_provider_configs(self, user_id: str) -> Sequence[AIProviderConfig]:
         return self._repository.list_provider_configs(user_id)
@@ -200,6 +202,26 @@ class AIProviderService:
         if config is None:
             raise ResourceNotFoundError("ai provider", provider_id)
         return config
+
+    def test_provider_config(self, user_id: str, provider_id: str) -> AIProviderTestResult:
+        if self._provider_factory is None:
+            raise ValidationError("AI provider test is not configured")
+        config = self._repository.get_provider_config(user_id, provider_id)
+        if config is None:
+            raise ResourceNotFoundError("ai provider", provider_id)
+        if not config.enabled:
+            raise ValidationError("AI provider is disabled")
+        provider = self._provider_factory.create(config)
+        payload = provider.generate_json(
+            LLMJsonRequest(
+                model=config.model,
+                system_prompt="Return only JSON.",
+                user_prompt='Return {"status":"ok"} to confirm the provider is reachable.',
+            )
+        )
+        if payload.get("status") != "ok":
+            raise ValidationError("AI provider test returned an unexpected response")
+        return AIProviderTestResult(provider_id=provider_id, ok=True, message="AI provider is reachable")
 
 
 class AIPlannerService:

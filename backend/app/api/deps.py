@@ -38,7 +38,7 @@ def get_ai_provider_service(
     session: Session = Depends(get_db_session),
 ) -> AIProviderService:
     repository = SQLAlchemyAIRepository(session)
-    return AIProviderService(repository)
+    return AIProviderService(repository, OpenAICompatibleProviderFactory())
 
 
 def get_ai_planner_service(

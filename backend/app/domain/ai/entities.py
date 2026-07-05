@@ -93,3 +93,10 @@ class PlannerCommitResult:
     learning_items_created: int
     todos_created: int
     notes_created: int
+
+
+@dataclass(frozen=True)
+class AIProviderTestResult:
+    provider_id: str
+    ok: bool
+    message: str

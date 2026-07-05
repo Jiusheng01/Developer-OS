@@ -112,6 +112,7 @@ GET    /api/v1/ai/providers
 POST   /api/v1/ai/providers
 PATCH  /api/v1/ai/providers/{providerId}
 POST   /api/v1/ai/providers/{providerId}/default
+POST   /api/v1/ai/providers/{providerId}/test
 DELETE /api/v1/ai/providers/{providerId}
 POST   /api/v1/ai/planner/generate
 GET    /api/v1/ai/planner/drafts

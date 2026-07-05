@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { Boxes, CheckCircle2, KeyRound, Plus, Power, Star, Trash2 } from "lucide-react";
+import { Boxes, CheckCircle2, KeyRound, Plus, Power, RadioTower, Star, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import {
   deleteAIProvider,
   listAIProviders,
   setDefaultAIProvider,
+  testAIProvider,
   updateAIProvider,
 } from "@/features/ai/data/ai-api";
 import type { AIProviderConfig } from "@/features/ai/data/types";
@@ -35,6 +36,7 @@ export function ModelsTab() {
   const [model, setModel] = useState("gpt-4.1-mini");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testingProviderId, setTestingProviderId] = useState<string | undefined>();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -101,6 +103,20 @@ export function ModelsTab() {
     setProviders((current) => current.filter((provider) => provider.id !== providerId));
   }
 
+  async function handleTestProvider(providerId: string) {
+    setError("");
+    setMessage("");
+    setTestingProviderId(providerId);
+    try {
+      const result = await testAIProvider(providerId);
+      setMessage(result.message);
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    } finally {
+      setTestingProviderId(undefined);
+    }
+  }
+
   return (
     <div className="grid gap-5">
       <DashboardPanelMotion>
@@ -142,6 +158,10 @@ export function ModelsTab() {
                 <Button type="button" size="sm" variant="outline" onClick={() => void handleSetDefault(provider.id)} disabled={provider.isDefault}>
                   <Star className="h-4 w-4" />
                   {t.setDefault}
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => void handleTestProvider(provider.id)} disabled={testingProviderId === provider.id || !provider.enabled}>
+                  <RadioTower className="h-4 w-4" />
+                  {testingProviderId === provider.id ? t.testing : t.test}
                 </Button>
                 <Button type="button" size="sm" variant="outline" onClick={() => void handleToggle(provider)}>
                   {provider.enabled ? <Power className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}

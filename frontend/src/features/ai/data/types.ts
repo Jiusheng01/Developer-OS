@@ -68,3 +68,9 @@ export type PlannerCommitResult = {
   todosCreated: number;
   notesCreated: number;
 };
+
+export type AIProviderTestResult = {
+  providerId: string;
+  ok: boolean;
+  message: string;
+};

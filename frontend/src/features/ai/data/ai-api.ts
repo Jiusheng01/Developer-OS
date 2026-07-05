@@ -3,6 +3,7 @@ import type {
   AIProviderConfig,
   AIProviderInput,
   AIProviderPatch,
+  AIProviderTestResult,
   LearningGoalInput,
   LearningPlanDraft,
   PlannerCommitResult,
@@ -91,6 +92,15 @@ function normalizeCommitResult(value: unknown): PlannerCommitResult {
   };
 }
 
+function normalizeProviderTestResult(value: unknown): AIProviderTestResult {
+  if (!isRecord(value)) throw new Error("Invalid AI provider test payload");
+  return {
+    providerId: stringValue(value.providerId),
+    ok: value.ok === true,
+    message: stringValue(value.message),
+  };
+}
+
 function encodeBody(value: unknown) {
   return JSON.stringify(value);
 }
@@ -115,6 +125,10 @@ export async function deleteAIProvider(id: string) {
 
 export async function setDefaultAIProvider(id: string) {
   return normalizeProvider(await apiRequest<unknown>(`/ai/providers/${id}/default`, { method: "POST" }));
+}
+
+export async function testAIProvider(id: string) {
+  return normalizeProviderTestResult(await apiRequest<unknown>(`/ai/providers/${id}/test`, { method: "POST" }));
 }
 
 export async function generateLearningPlan(input: LearningGoalInput) {

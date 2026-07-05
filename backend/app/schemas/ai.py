@@ -5,6 +5,7 @@ from pydantic import Field
 
 from app.domain.ai.entities import (
     AIProviderConfig,
+    AIProviderTestResult,
     LearningPlanDraft,
     PlannerCommitResult,
     PlanGoal,
@@ -63,6 +64,16 @@ class AIProviderRead(APIModel):
             created_at=config.created_at,
             updated_at=config.updated_at,
         )
+
+
+class AIProviderTestResultRead(APIModel):
+    provider_id: str = Field(alias="providerId")
+    ok: bool
+    message: str
+
+    @classmethod
+    def from_entity(cls, result: AIProviderTestResult) -> "AIProviderTestResultRead":
+        return cls(provider_id=result.provider_id, ok=result.ok, message=result.message)
 
 
 class LearningGoalInputCreate(APIModel):

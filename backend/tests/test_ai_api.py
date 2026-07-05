@@ -2,10 +2,10 @@ from fastapi import Depends
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_ai_planner_service, get_db_session
+from app.api.deps import get_ai_planner_service, get_ai_provider_service, get_db_session
 from app.domain.ai.entities import AIProviderConfig, LLMJsonRequest
 from app.domain.ai.providers import LLMProvider
-from app.domain.ai.services import AIPlannerService
+from app.domain.ai.services import AIPlannerService, AIProviderService
 from app.domain.dashboard.services import DashboardService
 from app.infrastructure.database.unit_of_work import SQLAlchemyUnitOfWork
 from app.infrastructure.repositories.sqlalchemy_ai_repository import SQLAlchemyAIRepository
@@ -41,10 +41,22 @@ class FakePlannerProvider:
         }
 
 
+class FakeProviderTestProvider:
+    def generate_json(self, request: LLMJsonRequest) -> dict[str, object]:
+        assert request.model == "gpt-test"
+        return {"status": "ok"}
+
+
 class FakePlannerProviderFactory:
     def create(self, config: AIProviderConfig) -> LLMProvider:
         assert config.provider_type == "openai_compatible"
         return FakePlannerProvider()
+
+
+class FakeProviderTestFactory:
+    def create(self, config: AIProviderConfig) -> LLMProvider:
+        assert config.provider_type == "openai_compatible"
+        return FakeProviderTestProvider()
 
 
 def provider_payload(**overrides):
@@ -75,6 +87,10 @@ def get_fake_planner_service(session: Session = Depends(get_db_session)) -> AIPl
         dashboard_service,
         SQLAlchemyUnitOfWork(session),
     )
+
+
+def get_fake_provider_service(session: Session = Depends(get_db_session)) -> AIProviderService:
+    return AIProviderService(SQLAlchemyAIRepository(session), FakeProviderTestFactory())
 
 
 def test_ai_providers_require_auth(client: TestClient) -> None:
@@ -130,6 +146,28 @@ def test_invalid_ai_provider_config_returns_400(client: TestClient, auth_headers
 
     assert response.status_code == 400
     assert response.json()["detail"] == "base_url must be a valid http or https URL"
+
+
+def test_ai_provider_connection_test_uses_provider_boundary(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    client.app.dependency_overrides[get_ai_provider_service] = get_fake_provider_service
+    try:
+        create_response = client.post("/api/v1/ai/providers", json=provider_payload(), headers=auth_headers)
+        assert create_response.status_code == 201
+        provider_id = create_response.json()["id"]
+
+        response = client.post(f"/api/v1/ai/providers/{provider_id}/test", headers=auth_headers)
+    finally:
+        client.app.dependency_overrides.pop(get_ai_provider_service, None)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "providerId": provider_id,
+        "ok": True,
+        "message": "AI provider is reachable",
+    }
 
 
 def test_planner_returns_setup_required_without_default_provider(
