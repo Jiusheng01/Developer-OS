@@ -17,11 +17,16 @@ class OpenAICompatibleProvider:
             response_payload = self._request_json(_chat_payload(request, include_response_format=True))
         except HTTPError as exc:
             if exc.code not in {400, 422}:
-                raise ValidationError(_provider_http_error_message(exc.code)) from exc
+                raise ValidationError(_provider_http_error_message(exc.code, _provider_error_detail(exc, self._config.api_key))) from exc
             try:
                 response_payload = self._request_json(_chat_payload(request, include_response_format=False))
             except HTTPError as fallback_exc:
-                raise ValidationError(_provider_http_error_message(fallback_exc.code)) from fallback_exc
+                raise ValidationError(
+                    _provider_http_error_message(
+                        fallback_exc.code,
+                        _provider_error_detail(fallback_exc, self._config.api_key),
+                    )
+                ) from fallback_exc
 
         return self._extract_json_content(response_payload)
 
@@ -38,7 +43,8 @@ class OpenAICompatibleProvider:
         )
         try:
             with urlopen(http_request, timeout=self._timeout_seconds) as response:
-                return json.loads(response.read().decode("utf-8"))
+                response_body = response.read().decode("utf-8", errors="replace")
+                return json.loads(response_body)
         except HTTPError:
             raise
         except (URLError, TimeoutError) as exc:
@@ -107,7 +113,7 @@ def _parse_json_object_content(content: str) -> dict[str, object]:
             continue
         if isinstance(parsed, dict):
             return {str(key): value for key, value in parsed.items()}
-    raise ValidationError("LLM provider returned non-JSON plan")
+    raise ValidationError(f"LLM provider returned non-JSON plan. Provider response: {_safe_snippet(content)}")
 
 
 class OpenAICompatibleProviderFactory:
@@ -117,20 +123,75 @@ class OpenAICompatibleProviderFactory:
         return OpenAICompatibleProvider(config)
 
 
-def _provider_http_error_message(status_code: int) -> str:
+def _provider_http_error_message(status_code: int, provider_detail: str | None = None) -> str:
     if status_code == 400:
-        return "LLM provider rejected the request. Check whether the Base URL points to a chat completions endpoint and whether the model name is valid."
-    if status_code == 401:
-        return "LLM provider authentication failed. Check the API Key."
-    if status_code == 403:
-        return (
+        message = "LLM provider rejected the request. Check whether the Base URL points to a chat completions endpoint and whether the model name is valid."
+    elif status_code == 401:
+        message = "LLM provider authentication failed. Check the API Key."
+    elif status_code == 403:
+        message = (
             "LLM provider access was forbidden. Check API Key permissions, account status, region access, "
             "and whether the selected model is allowed for this provider."
         )
-    if status_code == 404:
-        return "LLM provider endpoint or model was not found. Check the Base URL and model name."
-    if status_code == 429:
-        return "LLM provider rate limit or quota was exceeded. Check billing, quota, or retry later."
-    if 500 <= status_code <= 599:
-        return "LLM provider is temporarily unavailable. Retry later or choose another provider."
-    return f"LLM provider request failed with status {status_code}"
+    elif status_code == 404:
+        message = "LLM provider endpoint or model was not found. Check the Base URL and model name."
+    elif status_code == 429:
+        message = "LLM provider rate limit or quota was exceeded. Check billing, quota, or retry later."
+    elif 500 <= status_code <= 599:
+        message = "LLM provider is temporarily unavailable. Retry later or choose another provider."
+    else:
+        message = f"LLM provider request failed with status {status_code}"
+    if provider_detail:
+        return f"{message} Provider detail: {provider_detail}"
+    return message
+
+
+def _provider_error_detail(exc: HTTPError, api_key: str) -> str | None:
+    try:
+        raw_body = exc.read().decode("utf-8", errors="replace")
+    except Exception:
+        return None
+    if not raw_body.strip():
+        return None
+    try:
+        payload = json.loads(raw_body)
+    except json.JSONDecodeError:
+        return _safe_snippet(raw_body, api_key)
+
+    detail_parts = _extract_error_parts(payload)
+    if not detail_parts:
+        return _safe_snippet(raw_body, api_key)
+    return _safe_snippet(" | ".join(detail_parts), api_key)
+
+
+def _extract_error_parts(value: object) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        parts: list[str] = []
+        for item in value:
+            parts.extend(_extract_error_parts(item))
+        return parts
+    if not isinstance(value, dict):
+        return []
+
+    parts: list[str] = []
+    for key in ("code", "status", "type", "message", "msg", "detail", "request_id", "requestId"):
+        item = value.get(key)
+        if isinstance(item, str) and item.strip():
+            parts.append(f"{key}={item.strip()}")
+        elif isinstance(item, (int, float)):
+            parts.append(f"{key}={item}")
+    for key in ("error", "data"):
+        if key in value:
+            parts.extend(_extract_error_parts(value[key]))
+    return parts
+
+
+def _safe_snippet(value: str, secret: str | None = None, limit: int = 500) -> str:
+    snippet = " ".join(value.strip().split())
+    if secret:
+        snippet = snippet.replace(secret, "[redacted]")
+    if len(snippet) > limit:
+        return f"{snippet[:limit]}..."
+    return snippet

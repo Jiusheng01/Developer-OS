@@ -58,6 +58,68 @@ def test_openai_compatible_provider_maps_403_to_actionable_safe_error(monkeypatc
     assert "sk-secret-should-not-leak" not in message
 
 
+def test_openai_compatible_provider_includes_sanitized_provider_error_detail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_urlopen(*_: object, **__: object) -> object:
+        raise HTTPError(
+            url="https://api.example.com/v1/chat/completions",
+            code=429,
+            msg="Too Many Requests",
+            hdrs={},
+            fp=BytesIO(
+                json.dumps(
+                    {
+                        "error": {
+                            "code": "ModelServiceUnavailable",
+                            "message": "LLM异常：模型服务暂时不可用 sk-secret-should-not-leak",
+                            "request_id": "req-test",
+                        }
+                    }
+                ).encode("utf-8")
+            ),
+        )
+
+    monkeypatch.setattr(openai_compatible, "urlopen", fake_urlopen)
+    provider = OpenAICompatibleProvider(provider_config())
+
+    with pytest.raises(ValidationError) as exc_info:
+        provider.generate_json(json_request())
+
+    message = exc_info.value.message
+    assert "rate limit or quota" in message
+    assert "ModelServiceUnavailable" in message
+    assert "LLM异常" in message
+    assert "req-test" in message
+    assert "sk-secret-should-not-leak" not in message
+    assert "[redacted]" in message
+
+
+def test_openai_compatible_provider_non_json_content_includes_safe_response_snippet(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeResponse:
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            return None
+
+        @staticmethod
+        def read() -> bytes:
+            return json.dumps({"choices": [{"message": {"content": "LLM异常：模型内部错误"}}]}).encode("utf-8")
+
+    monkeypatch.setattr(openai_compatible, "urlopen", lambda *_args, **_kwargs: FakeResponse())
+    provider = OpenAICompatibleProvider(provider_config())
+
+    with pytest.raises(ValidationError) as exc_info:
+        provider.generate_json(json_request())
+
+    message = exc_info.value.message
+    assert "non-JSON plan" in message
+    assert "LLM异常：模型内部错误" in message
+
+
 def test_openai_compatible_provider_retries_without_response_format(monkeypatch: pytest.MonkeyPatch) -> None:
     requests: list[dict[str, object]] = []
 
