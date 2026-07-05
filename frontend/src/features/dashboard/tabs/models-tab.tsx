@@ -1,7 +1,22 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { Boxes, CheckCircle2, KeyRound, Pencil, Plus, Power, RadioTower, Save, Star, Trash2, X } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import {
+  Boxes,
+  CheckCircle2,
+  ExternalLink,
+  KeyRound,
+  Pencil,
+  Plus,
+  Power,
+  RadioTower,
+  Save,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +45,7 @@ const PROVIDER_PRESETS = [
     displayName: "OpenAI Planner",
     baseUrl: "https://api.openai.com/v1",
     model: "gpt-4.1-mini",
+    docsUrl: "https://platform.openai.com/api-keys",
   },
   {
     id: "deepseek",
@@ -37,6 +53,7 @@ const PROVIDER_PRESETS = [
     displayName: "DeepSeek Planner",
     baseUrl: "https://api.deepseek.com",
     model: "deepseek-chat",
+    docsUrl: "https://platform.deepseek.com/api_keys",
   },
   {
     id: "qwen",
@@ -44,6 +61,7 @@ const PROVIDER_PRESETS = [
     displayName: "Qwen Planner",
     baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     model: "qwen-plus",
+    docsUrl: "https://dashscope.console.aliyun.com/apiKey",
   },
   {
     id: "doubao",
@@ -51,6 +69,7 @@ const PROVIDER_PRESETS = [
     displayName: "Doubao Planner",
     baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
     model: "doubao-seed-1-6-250615",
+    docsUrl: "https://console.volcengine.com/ark",
   },
   {
     id: "zhipu",
@@ -58,6 +77,7 @@ const PROVIDER_PRESETS = [
     displayName: "Zhipu Planner",
     baseUrl: "https://open.bigmodel.cn/api/paas/v4",
     model: "glm-4-flash",
+    docsUrl: "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
   },
   {
     id: "openrouter",
@@ -65,6 +85,7 @@ const PROVIDER_PRESETS = [
     displayName: "OpenRouter Planner",
     baseUrl: "https://openrouter.ai/api/v1",
     model: "openai/gpt-4o-mini",
+    docsUrl: "https://openrouter.ai/settings/keys",
   },
   {
     id: "ollama",
@@ -72,6 +93,7 @@ const PROVIDER_PRESETS = [
     displayName: "Ollama Local Planner",
     baseUrl: "http://127.0.0.1:11434/v1",
     model: "llama3.1",
+    docsUrl: "https://ollama.com/download",
   },
 ] as const;
 
@@ -99,6 +121,12 @@ export function ModelsTab() {
   const [selectedPresetId, setSelectedPresetId] = useState<ProviderPresetId | undefined>();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const sortedProviders = useMemo(
+    () => [...providers].sort((first, second) => Number(second.isDefault) - Number(first.isDefault)),
+    [providers],
+  );
+  const defaultProvider = providers.find((provider) => provider.isDefault);
+  const enabledProviders = providers.filter((provider) => provider.enabled).length;
 
   useEffect(() => {
     let cancelled = false;
@@ -277,37 +305,82 @@ export function ModelsTab() {
   return (
     <div className="grid gap-5">
       <DashboardPanelMotion>
+        <DashboardSection title={t.workbenchTitle} description={t.workbenchDescription} icon={Sparkles} contentClassName="grid gap-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-md border border-primary/25 bg-primary/10 p-3">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">{t.defaultModel}</p>
+              <p className="mt-2 truncate text-sm font-semibold">{defaultProvider?.displayName ?? t.noDefaultProvider}</p>
+              <p className="mt-1 truncate text-xs text-muted-foreground">{defaultProvider?.model ?? t.defaultModelHint}</p>
+            </div>
+            <div className="rounded-md border bg-background/70 p-3">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">{t.providerHealth}</p>
+              <p className="mt-2 text-sm font-semibold">
+                {enabledProviders}/{providers.length || 0} {t.enabledCount}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{t.providerHealthHint}</p>
+            </div>
+            <div className="rounded-md border bg-background/70 p-3">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">{t.securityBoundary}</p>
+              <p className="mt-2 text-sm font-semibold">{t.backendKeyStorage}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t.securityBoundaryHint}</p>
+            </div>
+          </div>
+          <div className="grid gap-2 lg:grid-cols-3">
+            {t.setupSteps.map((step, index) => (
+              <div key={step} className="flex items-start gap-3 rounded-md border bg-background/60 p-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">{index + 1}</span>
+                <p className="text-sm leading-6 text-muted-foreground">{step}</p>
+              </div>
+            ))}
+          </div>
+        </DashboardSection>
+      </DashboardPanelMotion>
+
+      <DashboardPanelMotion>
         <DashboardSection title={t.presetsTitle} description={t.presetsDescription} icon={RadioTower} contentClassName="grid gap-3">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {PROVIDER_PRESETS.map((preset) => {
               const selected = selectedPresetId === preset.id;
               return (
-                <button
+                <div
                   key={preset.id}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => applyPreset(preset)}
                   className={cn(
-                    "min-h-40 rounded-md border bg-background/70 p-3 text-left transition hover:border-primary/50 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "rounded-md border bg-background/70 p-3 transition hover:border-primary/50 hover:bg-accent/40",
                     selected ? "border-primary bg-primary/10" : "border-border",
                   )}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{preset.providerName}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{t.plannerChatModel}</p>
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => applyPreset(preset)}
+                    className="block min-h-32 w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{preset.providerName}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{t.plannerChatModel}</p>
+                      </div>
+                      <Badge variant="outline">{t.openAICompatible}</Badge>
                     </div>
-                    <Badge variant="outline">{t.openAICompatible}</Badge>
-                  </div>
-                  <p className="mt-3 min-h-10 text-xs leading-5 text-muted-foreground">{t.presetDescriptions[preset.id]}</p>
-                  <div className="mt-3 grid gap-1 text-xs">
-                    <p className="truncate text-foreground">
-                      <span className="text-muted-foreground">{t.model}: </span>
-                      {preset.model}
-                    </p>
-                    <p className="break-all text-muted-foreground">{preset.baseUrl}</p>
-                  </div>
-                </button>
+                    <p className="mt-3 min-h-10 text-xs leading-5 text-muted-foreground">{t.presetDescriptions[preset.id]}</p>
+                    <div className="mt-3 grid gap-1 text-xs">
+                      <p className="truncate text-foreground">
+                        <span className="text-muted-foreground">{t.model}: </span>
+                        {preset.model}
+                      </p>
+                      <p className="break-all text-muted-foreground">{preset.baseUrl}</p>
+                    </div>
+                  </button>
+                  <a
+                    href={preset.docsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    {t.getApiKey}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
               );
             })}
           </div>
@@ -358,18 +431,31 @@ export function ModelsTab() {
       {message ? <DashboardStatusStrip title={message} variant="info" /> : null}
 
       <DashboardSection title={t.providers} description={t.providersDescription} icon={KeyRound} contentClassName="grid gap-3">
+        <div className="flex flex-col gap-2 rounded-md border bg-background/60 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="accent">{t.plannerType}</Badge>
+              <p className="text-sm font-medium">{t.plannerTypeTitle}</p>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{t.plannerTypeDescription}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            {t.testBeforeUse}
+          </div>
+        </div>
         {loading ? <DashboardEmptyState title={t.loading} icon={Boxes} /> : null}
         {!loading && providers.length === 0 ? <DashboardEmptyState title={t.emptyTitle} description={t.emptyDescription} icon={Boxes} /> : null}
-        {providers.map((provider) => {
+        {sortedProviders.map((provider) => {
           const editing = editingProviderId === provider.id;
           const busy = updatingProviderId === provider.id || testingProviderId === provider.id;
           const confirmingDelete = confirmingDeleteId === provider.id;
 
           return (
-            <div key={provider.id} className="rounded-md border bg-background/70 p-4">
+            <div key={provider.id} className="overflow-hidden rounded-md border bg-background/70">
               {editing ? (
                 <form
-                  className="grid gap-3"
+                  className="grid gap-3 p-4"
                   onSubmit={(event) => {
                     event.preventDefault();
                     void handleSaveEdit(provider.id);
@@ -393,16 +479,26 @@ export function ModelsTab() {
                   </div>
                 </form>
               ) : (
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex flex-col gap-3 border-l-4 border-l-primary/50 p-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium">{provider.displayName}</p>
                       {provider.isDefault ? <Badge>{t.default}</Badge> : null}
                       <Badge variant={provider.enabled ? "secondary" : "outline"}>{provider.enabled ? t.enabled : t.disabled}</Badge>
+                      <Badge variant="outline">{t.plannerType}</Badge>
                     </div>
-                    <p className="mt-2 truncate text-sm text-muted-foreground">{provider.baseUrl}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {t.model}: {provider.model} · {provider.hasApiKey ? t.keyStored : t.keyMissing}
+                    <div className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
+                      <div className="min-w-0 rounded-md border bg-card/60 p-2">
+                        <p className="text-muted-foreground">{t.model}</p>
+                        <p className="mt-1 truncate font-medium text-foreground">{provider.model}</p>
+                      </div>
+                      <div className="min-w-0 rounded-md border bg-card/60 p-2 sm:col-span-2">
+                        <p className="text-muted-foreground">{t.baseUrl}</p>
+                        <p className="mt-1 break-all font-medium text-foreground">{provider.baseUrl}</p>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {provider.hasApiKey ? t.keyStored : t.keyMissing}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
