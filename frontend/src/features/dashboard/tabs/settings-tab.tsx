@@ -27,6 +27,7 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
   const [exportText, setExportText] = useState("");
   const [importText, setImportText] = useState("");
   const [dataMessage, setDataMessage] = useState("");
+  const [resetArmed, setResetArmed] = useState(false);
 
   const importErrorMessages: Record<DashboardImportError, string> = {
     empty: t.importEmpty,
@@ -43,11 +44,13 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
   }
 
   async function handleGenerateExport() {
+    setResetArmed(false);
     setExportText(await store.exportDashboardData());
     setDataMessage(t.exportReady);
   }
 
   async function handleCopyExport() {
+    setResetArmed(false);
     const text = exportText || (await store.exportDashboardData());
     setExportText(text);
 
@@ -66,6 +69,7 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
 
   async function handleImport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setResetArmed(false);
     const result = await store.importDashboardData(importText);
 
     if (!result.ok) {
@@ -76,6 +80,24 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
     setImportText("");
     setExportText("");
     setDataMessage(t.importSuccess);
+  }
+
+  function handleArmReset() {
+    setResetArmed(true);
+    setDataMessage(t.resetPending);
+  }
+
+  function handleCancelReset() {
+    setResetArmed(false);
+    setDataMessage(t.resetCancelled);
+  }
+
+  function handleConfirmReset() {
+    store.clearData();
+    setResetArmed(false);
+    setExportText("");
+    setImportText("");
+    setDataMessage(t.resetSubmitted);
   }
 
   return (
@@ -129,10 +151,20 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
 
         <DashboardPanelMotion>
           <DashboardSection title={t.localData} description={t.localDataDescription} icon={Trash2}>
-            <Button type="button" variant="destructive" onClick={store.clearData}>
-              <Trash2 className="h-4 w-4" />
-              {t.clearLocalData}
-            </Button>
+            <div className="grid gap-3">
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="destructive" onClick={resetArmed ? handleConfirmReset : handleArmReset}>
+                  <Trash2 className="h-4 w-4" />
+                  {resetArmed ? t.confirmReset : t.clearLocalData}
+                </Button>
+                {resetArmed ? (
+                  <Button type="button" variant="outline" onClick={handleCancelReset}>
+                    {t.cancelReset}
+                  </Button>
+                ) : null}
+              </div>
+              {resetArmed ? <DashboardStatusStrip title={t.resetPending} variant="warning" /> : null}
+            </div>
           </DashboardSection>
         </DashboardPanelMotion>
       </div>
