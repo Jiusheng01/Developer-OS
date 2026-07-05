@@ -1,5 +1,8 @@
+from collections.abc import Mapping
+
 from fastapi import Depends
 from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_ai_planner_service, get_ai_provider_service, get_db_session
@@ -72,6 +75,11 @@ class InvalidPlannerProviderFactory:
         return InvalidPlannerProvider()
 
 
+class FailingCommitDashboardService(DashboardService):
+    def create_note(self, user_id: str, data: Mapping[str, object]):
+        raise RuntimeError("simulated planner commit failure")
+
+
 class FakeProviderTestFactory:
     def create(self, config: AIProviderConfig) -> LLMProvider:
         assert config.provider_type == "openai_compatible"
@@ -124,6 +132,23 @@ def get_invalid_planner_service(session: Session = Depends(get_db_session)) -> A
     return AIPlannerService(
         ai_repository,
         InvalidPlannerProviderFactory(),
+        dashboard_service,
+        SQLAlchemyUnitOfWork(session),
+    )
+
+
+def get_failing_commit_planner_service(session: Session = Depends(get_db_session)) -> AIPlannerService:
+    ai_repository = SQLAlchemyAIRepository(session, auto_commit=False)
+    dashboard_repository = SQLAlchemyDashboardRepository(session, auto_commit=False)
+    dashboard_service = FailingCommitDashboardService(
+        dashboard_repository,
+        dashboard_repository,
+        dashboard_repository,
+        dashboard_repository,
+    )
+    return AIPlannerService(
+        ai_repository,
+        FakePlannerProviderFactory(),
         dashboard_service,
         SQLAlchemyUnitOfWork(session),
     )
@@ -204,6 +229,27 @@ def test_ai_provider_connection_test_uses_provider_boundary(
         "ok": True,
         "message": "AI provider is reachable",
     }
+
+
+def test_ai_provider_connection_test_rejects_disabled_and_foreign_provider(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    other_auth_headers: dict[str, str],
+) -> None:
+    disabled_response = client.post(
+        "/api/v1/ai/providers",
+        json=provider_payload(enabled=False),
+        headers=auth_headers,
+    )
+    assert disabled_response.status_code == 201
+    disabled_provider_id = disabled_response.json()["id"]
+
+    disabled_test_response = client.post(f"/api/v1/ai/providers/{disabled_provider_id}/test", headers=auth_headers)
+    foreign_test_response = client.post(f"/api/v1/ai/providers/{disabled_provider_id}/test", headers=other_auth_headers)
+
+    assert disabled_test_response.status_code == 400
+    assert disabled_test_response.json()["detail"] == "AI provider is disabled"
+    assert foreign_test_response.status_code == 404
 
 
 def test_planner_returns_setup_required_without_default_provider(
@@ -340,6 +386,38 @@ def test_planner_commit_writes_draft_to_workspace_modules(
     assert learning_items[0]["title"] == "FastAPI service boundaries"
     assert todos[0]["title"] == "Draft planner schema"
     assert notes[0]["title"] == "Daily learning reflection"
+
+
+def test_planner_commit_rolls_back_workspace_writes_when_a_domain_write_fails(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    client.app.dependency_overrides[get_ai_planner_service] = get_failing_commit_planner_service
+    try:
+        assert client.post("/api/v1/ai/providers", json=provider_payload(), headers=auth_headers).status_code == 201
+        generate_response = client.post(
+            "/api/v1/ai/planner/generate",
+            json={
+                "target": "Become an AI application developer",
+                "currentLevel": "Can build small Python apps",
+                "weeklyHours": 8,
+                "preferredStack": ["FastAPI", "PostgreSQL"],
+            },
+            headers=auth_headers,
+        )
+        assert generate_response.status_code == 200
+        draft_id = generate_response.json()["id"]
+
+        with pytest.raises(RuntimeError, match="simulated planner commit failure"):
+            client.post(f"/api/v1/ai/planner/drafts/{draft_id}/commit", headers=auth_headers)
+    finally:
+        client.app.dependency_overrides.pop(get_ai_planner_service, None)
+
+    assert client.get("/api/v1/goals", headers=auth_headers).json() == []
+    assert client.get("/api/v1/learning-items", headers=auth_headers).json() == []
+    assert client.get("/api/v1/todos", headers=auth_headers).json() == []
+    assert client.get("/api/v1/notes", headers=auth_headers).json() == []
+    assert client.get("/api/v1/ai/planner/drafts", headers=auth_headers).json()[0]["status"] == "draft"
 
 
 def test_planner_draft_history_is_user_scoped_and_reflects_commit_status(
