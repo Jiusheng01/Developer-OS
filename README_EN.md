@@ -6,7 +6,22 @@
 
 Personal Developer OS: a public developer site plus a private daily workspace.
 
-## V3 Architecture
+## Current Positioning
+
+Developer OS remains the product shape: public site plus private workspace.
+
+Starting in V4, the product direction is **AI Learning Workspace**. The goal is not a generic AI Chat page; it is planning infrastructure that turns AI-generated learning plans into daily execution.
+
+The current V4 foundation adds:
+
+- AI Planner: enter a learning goal, current level, deadline, weekly hours, and preferred stack to generate a structured learning plan draft.
+- AI Providers: configure OpenAI-compatible Base URL, API Key, and Model.
+- Unified backend AI Service / LLM Provider boundary: the frontend calls FastAPI only and never calls model APIs directly.
+- Planner draft persistence: the LLM returns structured planning data; later Planner Service iterations will validate and write into Goals, Learning, Todo, and Notes.
+
+Early V4 implements Planner only. Future agents such as Reviewer, Coach, and Summarizer are reserved but not implemented yet.
+
+## Architecture
 
 ```text
 frontend/ Next.js App Router
@@ -18,6 +33,7 @@ frontend/ Next.js App Router
 backend/ FastAPI
   -> API endpoints
   -> Dashboard service layer
+  -> AI Provider / Planner service layer
   -> Repository protocols
   -> SQLAlchemy repository
   -> SQLite
@@ -33,6 +49,8 @@ V3.0 keeps the public site static-data driven and adds migration-backed database
 The backend still defaults to SQLite and now uses Alembic as the schema source of truth. Set `DEVELOPER_OS_DATABASE_URL` to switch to a local PostgreSQL database. V3 does not introduce Docker. V3.1 adds JWT auth and public registration; V3.2 scopes Dashboard business APIs to the current user; V3.3 adds the frontend login/register experience; V3.4 removes the Dashboard LocalStorage business-data mode.
 
 The Dashboard now always uses the backend API. The frontend shows login/register before the Dashboard and automatically attaches the bearer token to business API requests. Theme, locale, and active tab remain browser-local; Todo, Learning, Notes, and Goals are stored only in the backend account data.
+
+AI Provider API keys are stored in the backend database. Read responses return `hasApiKey` only and never return the key to the browser.
 
 ## Frontend
 
@@ -86,6 +104,19 @@ GET  /api/v1/auth/me
 ```
 
 Public registration is enabled by default and can be disabled with `DEVELOPER_OS_PUBLIC_REGISTRATION_ENABLED=false`. Configure the JWT signing secret with `DEVELOPER_OS_JWT_SECRET_KEY`. After V3.2, Todo, Learning, Notes, Goals, and Goal Task APIs require a bearer token.
+
+AI endpoints:
+
+```text
+GET    /api/v1/ai/providers
+POST   /api/v1/ai/providers
+PATCH  /api/v1/ai/providers/{providerId}
+POST   /api/v1/ai/providers/{providerId}/default
+DELETE /api/v1/ai/providers/{providerId}
+POST   /api/v1/ai/planner/generate
+```
+
+These endpoints require a bearer token. Planner currently generates a structured draft and does not directly write into Todo, Learning, Notes, or Goals.
 
 ## Recommended Development Scripts
 

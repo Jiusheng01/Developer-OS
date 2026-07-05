@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { BookOpenCheck, CheckSquare, ClipboardList, Home, NotebookText, Settings, Target } from "lucide-react";
+import { BookOpenCheck, Boxes, BrainCircuit, CheckSquare, ClipboardList, Home, NotebookText, Settings, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardProviderBadge } from "@/features/dashboard/components/dashboard-provider-badge";
 import type { DashboardDataProviderMode } from "@/features/dashboard/data/provider-config";
@@ -12,10 +12,12 @@ import { useLocale } from "@/lib/i18n/locale-provider";
 
 const tabs: Array<{ id: DashboardTab; icon: ComponentType<{ className?: string }> }> = [
   { id: "today", icon: Home },
+  { id: "planner", icon: BrainCircuit },
   { id: "todo", icon: CheckSquare },
   { id: "learning", icon: BookOpenCheck },
   { id: "notes", icon: NotebookText },
   { id: "goals", icon: Target },
+  { id: "models", icon: Boxes },
   { id: "settings", icon: Settings },
 ];
 

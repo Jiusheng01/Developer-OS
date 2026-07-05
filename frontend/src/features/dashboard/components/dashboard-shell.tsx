@@ -8,7 +8,9 @@ import { DashboardTabTransition } from "@/features/dashboard/components/dashboar
 import { DashboardStatusStrip } from "@/features/dashboard/components/dashboard-status-strip";
 import { GoalsTab } from "@/features/dashboard/tabs/goals-tab";
 import { LearningTab } from "@/features/dashboard/tabs/learning-tab";
+import { ModelsTab } from "@/features/dashboard/tabs/models-tab";
 import { NotesTab } from "@/features/dashboard/tabs/notes-tab";
+import { PlannerTab } from "@/features/dashboard/tabs/planner-tab";
 import { SettingsTab } from "@/features/dashboard/tabs/settings-tab";
 import { TodayTab } from "@/features/dashboard/tabs/today-tab";
 import { TodoTab } from "@/features/dashboard/tabs/todo-tab";
@@ -73,10 +75,12 @@ function DashboardWorkspace({ onSignOut }: { onSignOut?: () => void }) {
           ) : null}
           <DashboardTabTransition activeKey={store.activeTab}>
             {store.activeTab === "today" ? <TodayTab store={store} /> : null}
+            {store.activeTab === "planner" ? <PlannerTab /> : null}
             {store.activeTab === "todo" ? <TodoTab store={store} /> : null}
             {store.activeTab === "learning" ? <LearningTab store={store} /> : null}
             {store.activeTab === "notes" ? <NotesTab store={store} /> : null}
             {store.activeTab === "goals" ? <GoalsTab store={store} /> : null}
+            {store.activeTab === "models" ? <ModelsTab /> : null}
             {store.activeTab === "settings" ? <SettingsTab store={store} /> : null}
           </DashboardTabTransition>
         </main>

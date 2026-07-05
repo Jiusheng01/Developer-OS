@@ -1,6 +1,6 @@
 import type { ThemePreference } from "@/lib/theme/theme-provider";
 
-export type DashboardTab = "today" | "todo" | "learning" | "notes" | "goals" | "settings";
+export type DashboardTab = "today" | "planner" | "todo" | "learning" | "notes" | "goals" | "models" | "settings";
 
 export type TodoPriority = "low" | "medium" | "high";
 

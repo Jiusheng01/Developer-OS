@@ -1,6 +1,6 @@
 # Developer OS Backend
 
-FastAPI backend for Developer OS V3.
+FastAPI backend for Developer OS V3/V4.
 
 ## Scope
 
@@ -12,6 +12,14 @@ V3 persists Dashboard business data with FastAPI, SQLAlchemy, SQLite by default,
 - Goals and goal tasks
 
 The Dashboard uses the backend API for business data; theme, language, and active tab remain browser-local. PostgreSQL is supported through `DEVELOPER_OS_DATABASE_URL`. Docker is intentionally out of scope for V3. Frontend Dashboard access uses the login/register gate.
+
+V4 starts the AI Learning Workspace direction with:
+
+- AI Providers for OpenAI-compatible model configuration
+- AI Planner for structured learning-plan draft generation
+- Backend-owned LLM Provider boundary
+
+The frontend never calls model APIs directly. API keys stay in backend persistence and are not returned by read endpoints.
 
 ## Setup
 
@@ -120,6 +128,52 @@ Protected resources:
 ```
 
 Each list, create, update, and delete operation is scoped to the current token user. Cross-user access returns the same not-found contract as a missing resource.
+
+## AI API
+
+AI Provider endpoints:
+
+```text
+GET    /api/v1/ai/providers
+POST   /api/v1/ai/providers
+PATCH  /api/v1/ai/providers/{providerId}
+POST   /api/v1/ai/providers/{providerId}/default
+DELETE /api/v1/ai/providers/{providerId}
+```
+
+Create Provider:
+
+```text
+POST /api/v1/ai/providers
+Authorization: Bearer <accessToken>
+{
+  "providerType": "openai_compatible",
+  "displayName": "OpenAI Compatible",
+  "baseUrl": "https://api.openai.com/v1",
+  "apiKey": "<secret>",
+  "model": "gpt-4.1-mini",
+  "enabled": true
+}
+```
+
+Read responses include `hasApiKey` and never include `apiKey`.
+
+Planner endpoint:
+
+```text
+POST /api/v1/ai/planner/generate
+Authorization: Bearer <accessToken>
+{
+  "target": "Become an AI application developer",
+  "currentLevel": "Can build small Python apps",
+  "deadline": "2026-12-31",
+  "weeklyHours": 8,
+  "preferredStack": ["FastAPI", "PostgreSQL", "RAG"],
+  "constraints": "Keep the plan project-based."
+}
+```
+
+The Planner returns a structured draft. It does not directly write into Todo, Learning, Notes, or Goals in this slice.
 
 The default SQLite database path is:
 

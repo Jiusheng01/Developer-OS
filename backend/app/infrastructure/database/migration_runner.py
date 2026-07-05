@@ -10,8 +10,11 @@ from sqlalchemy import create_engine, inspect, text
 from app.core.config import get_settings
 
 BASELINE_DASHBOARD_REVISION = "20260705_0001"
+USER_OWNERSHIP_REVISION = "20260705_0003"
 LEGACY_DASHBOARD_TABLES = {"goal_tasks", "goals", "learning_items", "notes", "todos"}
-CURRENT_SCHEMA_TABLES = LEGACY_DASHBOARD_TABLES | {"users"}
+AI_TABLES = {"ai_plan_drafts", "ai_providers"}
+USER_OWNED_SCHEMA_TABLES = LEGACY_DASHBOARD_TABLES | {"users"}
+CURRENT_SCHEMA_TABLES = USER_OWNED_SCHEMA_TABLES | AI_TABLES
 OWNER_TABLES = {"goals", "learning_items", "notes", "todos"}
 
 
@@ -58,6 +61,9 @@ def _detect_bootstrap_revision(database_url: str) -> str | None:
 
     if CURRENT_SCHEMA_TABLES.issubset(table_names) and _owner_tables_have_user_id(database_url):
         return "head"
+
+    if USER_OWNED_SCHEMA_TABLES.issubset(table_names) and _owner_tables_have_user_id(database_url):
+        return USER_OWNERSHIP_REVISION
 
     if LEGACY_DASHBOARD_TABLES.issubset(table_names):
         return BASELINE_DASHBOARD_REVISION

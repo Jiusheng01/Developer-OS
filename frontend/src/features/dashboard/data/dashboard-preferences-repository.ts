@@ -24,10 +24,12 @@ function normalizeTheme(value: unknown): ThemePreference {
 
 function normalizeTab(value: unknown): DashboardTab {
   return value === "today" ||
+    value === "planner" ||
     value === "todo" ||
     value === "learning" ||
     value === "notes" ||
     value === "goals" ||
+    value === "models" ||
     value === "settings"
     ? value
     : DEFAULT_DASHBOARD_PREFERENCES.activeTab;

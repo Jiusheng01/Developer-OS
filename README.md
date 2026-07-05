@@ -6,7 +6,22 @@
 
 Developer OS 是一个个人开发者操作系统：它既是公开的个人开发者网站，也是自己每天使用的私人开发工作台。
 
-## V3 架构
+## 当前定位
+
+Developer OS 是产品形态：公开个人站点 + 私人工作台。
+
+从 V4 开始，项目定位升级为 **AI Learning Workspace**。核心目标不是做通用 AI Chat，而是把 AI 生成的学习计划真正落地到每日执行中。
+
+当前 V4 初始切片已经加入：
+
+- AI Planner：输入学习目标、当前水平、截止日期、每周时间和偏好技术栈，生成结构化学习计划草稿。
+- AI Providers：配置 OpenAI 兼容 Provider 的 Base URL、API Key 和 Model。
+- 后端统一 AI Service / LLM Provider 边界：前端只调用 FastAPI，不直接请求模型接口。
+- Planner 草稿持久化：LLM 只返回结构化计划，后续再由 Planner Service 校验后写入 Goals、Learning、Todo、Notes。
+
+早期 V4 只实现 Planner，不提前开发 Reviewer、Coach、Summarizer 等未来 Agent。
+
+## 架构
 
 ```text
 frontend/ 前端应用（Next.js App Router）
@@ -18,6 +33,7 @@ frontend/ 前端应用（Next.js App Router）
 backend/ 后端服务（FastAPI）
   -> 后端接口
   -> 工作台业务服务层
+  -> AI Provider / Planner 服务层
   -> 数据仓储协议
   -> SQLAlchemy 数据仓储实现
   -> SQLite 数据库
@@ -33,6 +49,8 @@ V3.0 保持公开站点由静态结构化数据驱动，同时为工作台业务
 后端默认仍使用 SQLite，并通过 Alembic 管理 schema；需要时可通过 `DEVELOPER_OS_DATABASE_URL` 切换到本机 PostgreSQL。V3 暂不引入 Docker。V3.1 已加入 JWT 认证和公开注册；V3.2 已让 Dashboard 业务 API 按当前用户隔离；V3.3 已接入前端登录/注册体验；V3.4 已移除 Dashboard LocalStorage 业务数据模式。
 
 Dashboard 现在固定使用后端 API。前端会先显示登录/注册界面，登录成功后 Dashboard 请求会自动携带 Bearer token。主题、语言和当前标签页仍然保存在浏览器本地；Todo、Learning、Notes、Goals 等业务数据只保存在后端账号数据中。
+
+AI Provider 的 API Key 保存在后端数据库中，读取接口只返回 `hasApiKey`，不会把密钥返回给浏览器。
 
 ## 前端
 
@@ -86,6 +104,19 @@ GET  /api/v1/auth/me
 ```
 
 公开注册默认开启，可通过 `DEVELOPER_OS_PUBLIC_REGISTRATION_ENABLED=false` 关闭。JWT 密钥通过 `DEVELOPER_OS_JWT_SECRET_KEY` 配置。V3.2 后，待办事项、学习项、笔记、目标等业务 API 都需要 Bearer token。
+
+AI 接口：
+
+```text
+GET    /api/v1/ai/providers
+POST   /api/v1/ai/providers
+PATCH  /api/v1/ai/providers/{providerId}
+POST   /api/v1/ai/providers/{providerId}/default
+DELETE /api/v1/ai/providers/{providerId}
+POST   /api/v1/ai/planner/generate
+```
+
+这些接口都需要 Bearer token。Planner 当前生成结构化草稿，不会直接把内容写入 Todo、Learning、Notes、Goals。
 
 ## 推荐开发脚本
 
