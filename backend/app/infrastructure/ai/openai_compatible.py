@@ -34,9 +34,9 @@ class OpenAICompatibleProvider:
             with urlopen(http_request, timeout=self._timeout_seconds) as response:
                 response_payload = json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
-            raise ValidationError(f"LLM provider request failed with status {exc.code}") from exc
+            raise ValidationError(_provider_http_error_message(exc.code)) from exc
         except (URLError, TimeoutError) as exc:
-            raise ValidationError("LLM provider request failed") from exc
+            raise ValidationError("LLM provider is unreachable. Check the Base URL and network access.") from exc
         except json.JSONDecodeError as exc:
             raise ValidationError("LLM provider returned invalid JSON") from exc
 
@@ -72,3 +72,22 @@ class OpenAICompatibleProviderFactory:
         if config.provider_type != "openai_compatible":
             raise ValidationError("provider_type is not supported")
         return OpenAICompatibleProvider(config)
+
+
+def _provider_http_error_message(status_code: int) -> str:
+    if status_code == 400:
+        return "LLM provider rejected the request. Check whether the model supports chat completions and JSON output."
+    if status_code == 401:
+        return "LLM provider authentication failed. Check the API Key."
+    if status_code == 403:
+        return (
+            "LLM provider access was forbidden. Check API Key permissions, account status, region access, "
+            "and whether the selected model is allowed for this provider."
+        )
+    if status_code == 404:
+        return "LLM provider endpoint or model was not found. Check the Base URL and model name."
+    if status_code == 429:
+        return "LLM provider rate limit or quota was exceeded. Check billing, quota, or retry later."
+    if 500 <= status_code <= 599:
+        return "LLM provider is temporarily unavailable. Retry later or choose another provider."
+    return f"LLM provider request failed with status {status_code}"
