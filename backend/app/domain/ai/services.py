@@ -242,6 +242,9 @@ class AIPlannerService:
             self._unit_of_work.commit()
         return created
 
+    def list_plan_drafts(self, user_id: str, limit: int = 20) -> Sequence[LearningPlanDraft]:
+        return self._repository.list_plan_drafts(user_id, limit)
+
     def commit_plan(self, user_id: str, draft_id: str) -> PlannerCommitResult:
         if self._dashboard_service is None:
             raise ValidationError("planner commit is not configured")

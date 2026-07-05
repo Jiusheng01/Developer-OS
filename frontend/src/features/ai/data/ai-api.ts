@@ -123,6 +123,12 @@ export async function generateLearningPlan(input: LearningGoalInput) {
   );
 }
 
+export async function listLearningPlanDrafts() {
+  const payload = await apiRequest<unknown>("/ai/planner/drafts");
+  if (!Array.isArray(payload)) throw new Error("Invalid learning plan draft history payload");
+  return payload.map(normalizePlanDraft);
+}
+
 export async function commitLearningPlanDraft(draftId: string) {
   return normalizeCommitResult(
     await apiRequest<unknown>(`/ai/planner/drafts/${draftId}/commit`, { method: "POST" }),

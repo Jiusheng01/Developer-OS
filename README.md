@@ -114,6 +114,7 @@ PATCH  /api/v1/ai/providers/{providerId}
 POST   /api/v1/ai/providers/{providerId}/default
 DELETE /api/v1/ai/providers/{providerId}
 POST   /api/v1/ai/planner/generate
+GET    /api/v1/ai/planner/drafts
 POST   /api/v1/ai/planner/drafts/{draftId}/commit
 ```
 

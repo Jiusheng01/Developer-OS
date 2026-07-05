@@ -176,6 +176,13 @@ Authorization: Bearer <accessToken>
 
 The Planner first returns a structured draft. The commit endpoint writes that draft into workspace modules through backend domain services.
 
+List Planner drafts:
+
+```text
+GET /api/v1/ai/planner/drafts
+Authorization: Bearer <accessToken>
+```
+
 Commit Planner draft:
 
 ```text

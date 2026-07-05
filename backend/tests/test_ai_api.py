@@ -239,3 +239,42 @@ def test_planner_commit_writes_draft_to_workspace_modules(
     assert learning_items[0]["title"] == "FastAPI service boundaries"
     assert todos[0]["title"] == "Draft planner schema"
     assert notes[0]["title"] == "Daily learning reflection"
+
+
+def test_planner_draft_history_is_user_scoped_and_reflects_commit_status(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    other_auth_headers: dict[str, str],
+) -> None:
+    client.app.dependency_overrides[get_ai_planner_service] = get_fake_planner_service
+    try:
+        assert client.post("/api/v1/ai/providers", json=provider_payload(), headers=auth_headers).status_code == 201
+        generate_response = client.post(
+            "/api/v1/ai/planner/generate",
+            json={
+                "target": "Become an AI application developer",
+                "currentLevel": "Can build small Python apps",
+                "weeklyHours": 8,
+                "preferredStack": ["FastAPI", "PostgreSQL"],
+            },
+            headers=auth_headers,
+        )
+        assert generate_response.status_code == 200
+        draft_id = generate_response.json()["id"]
+
+        list_response = client.get("/api/v1/ai/planner/drafts", headers=auth_headers)
+        other_list_response = client.get("/api/v1/ai/planner/drafts", headers=other_auth_headers)
+        commit_response = client.post(f"/api/v1/ai/planner/drafts/{draft_id}/commit", headers=auth_headers)
+        committed_list_response = client.get("/api/v1/ai/planner/drafts", headers=auth_headers)
+    finally:
+        client.app.dependency_overrides.pop(get_ai_planner_service, None)
+
+    assert list_response.status_code == 200
+    assert list_response.json()[0]["id"] == draft_id
+    assert list_response.json()[0]["status"] == "draft"
+    assert other_list_response.status_code == 200
+    assert other_list_response.json() == []
+    assert commit_response.status_code == 200
+    assert committed_list_response.status_code == 200
+    assert committed_list_response.json()[0]["id"] == draft_id
+    assert committed_list_response.json()[0]["status"] == "committed"

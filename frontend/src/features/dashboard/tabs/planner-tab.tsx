@@ -1,12 +1,12 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { BrainCircuit, CalendarDays, Clock, ListChecks, NotebookText, Route, Target } from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
+import { BrainCircuit, CalendarDays, Clock, History, ListChecks, NotebookText, RefreshCcw, Route, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { commitLearningPlanDraft, generateLearningPlan } from "@/features/ai/data/ai-api";
+import { commitLearningPlanDraft, generateLearningPlan, listLearningPlanDrafts } from "@/features/ai/data/ai-api";
 import type { LearningPlanDraft } from "@/features/ai/data/types";
 import { DashboardEmptyState } from "@/features/dashboard/components/dashboard-empty-state";
 import { DashboardPanelMotion } from "@/features/dashboard/components/dashboard-motion";
@@ -43,10 +43,40 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
   const [preferredStack, setPreferredStack] = useState("");
   const [constraints, setConstraints] = useState("");
   const [draft, setDraft] = useState<LearningPlanDraft | undefined>();
+  const [draftHistory, setDraftHistory] = useState<LearningPlanDraft[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void listLearningPlanDrafts()
+      .then((drafts) => {
+        if (!cancelled) setDraftHistory(drafts);
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) setError(errorMessage(requestError));
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function reloadDraftHistory() {
+    setHistoryLoading(true);
+    try {
+      setDraftHistory(await listLearningPlanDrafts());
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -67,6 +97,7 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
         constraints,
       });
       setDraft(nextDraft);
+      setDraftHistory((current) => [nextDraft, ...current.filter((item) => item.id !== nextDraft.id)]);
     } catch (requestError) {
       setError(errorMessage(requestError));
     } finally {
@@ -83,6 +114,9 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
       const result = await commitLearningPlanDraft(draft.id);
       await store.reloadData();
       setDraft((current) => (current ? { ...current, status: result.status } : current));
+      setDraftHistory((current) =>
+        current.map((historyDraft) => (historyDraft.id === result.draftId ? { ...historyDraft, status: result.status } : historyDraft)),
+      );
       setMessage(
         t.importSuccess
           .replace("{goals}", String(result.goalsCreated))
@@ -126,41 +160,71 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
       {error ? <DashboardStatusStrip title={t.errorTitle} detail={error} variant="warning" /> : null}
       {message ? <DashboardStatusStrip title={message} variant="info" /> : null}
 
-      <DashboardSection title={t.draftTitle} description={t.draftDescription} icon={Route} contentClassName="grid gap-4">
-        {!draft ? <DashboardEmptyState title={t.emptyDraft} description={t.emptyDraftDescription} icon={BrainCircuit} /> : null}
-        {draft ? (
-          <div className="grid gap-4">
-            <div className="rounded-md border bg-background/70 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-base font-semibold">{draft.title}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">{draft.summary}</p>
-                </div>
-                <Badge>{draft.status}</Badge>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button type="button" onClick={() => void handleCommitDraft()} disabled={importing || draft.status === "committed"}>
-                  <ListChecks className="h-4 w-4" />
-                  {importing ? t.importing : t.importToWorkspace}
-                </Button>
-                <p className="self-center text-xs text-muted-foreground">{t.importHint}</p>
-              </div>
-            </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              <PlanBlock title={t.goals} icon={Target} items={draft.goals.map((goal) => goal.targetYear ? `${goal.title} (${goal.targetYear})` : goal.title)} />
-              <PlanBlock title={t.todos} icon={ListChecks} items={draft.todos.map((todo) => `${todo.title} · ${todo.priority}`)} />
-              <PlanBlock title={t.learningItems} icon={Clock} items={draft.learningItems.map((item) => `${item.title} · ${item.area}`)} />
-              <PlanBlock title={t.notePrompts} icon={NotebookText} items={draft.notePrompts.map((prompt) => `${prompt.title} · ${prompt.category}`)} />
-            </div>
-            {deadline ? (
-              <div className="inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-xs text-muted-foreground">
-                <CalendarDays className="h-3.5 w-3.5" />
-                {t.deadline}: {deadline}
-              </div>
-            ) : null}
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+        <DashboardSection title={t.historyTitle} description={t.historyDescription} icon={History} contentClassName="grid gap-3">
+          <div className="flex justify-end">
+            <Button type="button" size="sm" variant="outline" onClick={() => void reloadDraftHistory()} disabled={historyLoading}>
+              <RefreshCcw className="h-4 w-4" />
+              {historyLoading ? t.loadingHistory : t.refreshHistory}
+            </Button>
           </div>
-        ) : null}
-      </DashboardSection>
+          {!historyLoading && draftHistory.length === 0 ? (
+            <DashboardEmptyState title={t.emptyHistory} description={t.emptyHistoryDescription} icon={History} />
+          ) : null}
+          {draftHistory.map((historyDraft) => (
+            <button
+              key={historyDraft.id}
+              type="button"
+              onClick={() => setDraft(historyDraft)}
+              className="rounded-md border bg-background/70 p-4 text-left transition-colors hover:bg-secondary"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{historyDraft.title}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{historyDraft.summary}</p>
+                </div>
+                <Badge>{historyDraft.status}</Badge>
+              </div>
+            </button>
+          ))}
+        </DashboardSection>
+
+        <DashboardSection title={t.draftTitle} description={t.draftDescription} icon={Route} contentClassName="grid gap-4">
+          {!draft ? <DashboardEmptyState title={t.emptyDraft} description={t.emptyDraftDescription} icon={BrainCircuit} /> : null}
+          {draft ? (
+            <div className="grid gap-4">
+              <div className="rounded-md border bg-background/70 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-semibold">{draft.title}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">{draft.summary}</p>
+                  </div>
+                  <Badge>{draft.status}</Badge>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button type="button" onClick={() => void handleCommitDraft()} disabled={importing || draft.status === "committed"}>
+                    <ListChecks className="h-4 w-4" />
+                    {importing ? t.importing : t.importToWorkspace}
+                  </Button>
+                  <p className="self-center text-xs text-muted-foreground">{t.importHint}</p>
+                </div>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <PlanBlock title={t.goals} icon={Target} items={draft.goals.map((goal) => goal.targetYear ? `${goal.title} (${goal.targetYear})` : goal.title)} />
+                <PlanBlock title={t.todos} icon={ListChecks} items={draft.todos.map((todo) => `${todo.title} · ${todo.priority}`)} />
+                <PlanBlock title={t.learningItems} icon={Clock} items={draft.learningItems.map((item) => `${item.title} · ${item.area}`)} />
+                <PlanBlock title={t.notePrompts} icon={NotebookText} items={draft.notePrompts.map((prompt) => `${prompt.title} · ${prompt.category}`)} />
+              </div>
+              {deadline ? (
+                <div className="inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-xs text-muted-foreground">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  {t.deadline}: {deadline}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </DashboardSection>
+      </div>
     </div>
   );
 }

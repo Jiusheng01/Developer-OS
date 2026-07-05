@@ -18,6 +18,14 @@ def generate_learning_plan(
     return LearningPlanDraftRead.from_entity(draft)
 
 
+@router.get("/drafts", response_model=list[LearningPlanDraftRead])
+def list_learning_plan_drafts(
+    service: AIPlannerService = Depends(get_ai_planner_service),
+    current_user: User = Depends(get_current_user),
+) -> list[LearningPlanDraftRead]:
+    return [LearningPlanDraftRead.from_entity(draft) for draft in service.list_plan_drafts(current_user.id)]
+
+
 @router.post("/drafts/{draft_id}/commit", response_model=PlannerCommitResultRead)
 def commit_learning_plan(
     draft_id: str,

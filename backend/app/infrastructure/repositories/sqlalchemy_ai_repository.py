@@ -131,6 +131,16 @@ class SQLAlchemyAIRepository:
         self._save(model)
         return self._draft_from_model(model)
 
+    def list_plan_drafts(self, user_id: str, limit: int = 20) -> Sequence[LearningPlanDraft]:
+        safe_limit = min(100, max(1, limit))
+        models = self._session.scalars(
+            select(AIPlanDraftModel)
+            .where(AIPlanDraftModel.user_id == user_id)
+            .order_by(AIPlanDraftModel.created_at.desc())
+            .limit(safe_limit)
+        ).all()
+        return [self._draft_from_model(model) for model in models]
+
     def get_plan_draft(self, user_id: str, draft_id: str) -> LearningPlanDraft | None:
         model = self._session.scalar(
             select(AIPlanDraftModel).where(AIPlanDraftModel.user_id == user_id, AIPlanDraftModel.id == draft_id)
