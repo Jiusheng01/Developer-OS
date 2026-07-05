@@ -35,6 +35,7 @@ export function ModelsTab() {
   const [updatingProviderId, setUpdatingProviderId] = useState<string | undefined>();
   const [testingProviderId, setTestingProviderId] = useState<string | undefined>();
   const [editingProviderId, setEditingProviderId] = useState<string | undefined>();
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | undefined>();
   const [editDisplayName, setEditDisplayName] = useState("");
   const [editBaseUrl, setEditBaseUrl] = useState("");
   const [editModel, setEditModel] = useState("");
@@ -90,6 +91,7 @@ export function ModelsTab() {
   function startEditing(provider: AIProviderConfig) {
     setError("");
     setMessage("");
+    setConfirmingDeleteId(undefined);
     setEditingProviderId(provider.id);
     setEditDisplayName(provider.displayName);
     setEditBaseUrl(provider.baseUrl);
@@ -138,6 +140,7 @@ export function ModelsTab() {
   async function handleSetDefault(providerId: string) {
     setError("");
     setMessage("");
+    setConfirmingDeleteId(undefined);
     setUpdatingProviderId(providerId);
     try {
       const provider = await setDefaultAIProvider(providerId);
@@ -153,6 +156,7 @@ export function ModelsTab() {
   async function handleToggle(provider: AIProviderConfig) {
     setError("");
     setMessage("");
+    setConfirmingDeleteId(undefined);
     setUpdatingProviderId(provider.id);
     try {
       const updated = await updateAIProvider(provider.id, { enabled: !provider.enabled });
@@ -166,12 +170,20 @@ export function ModelsTab() {
   }
 
   async function handleDelete(providerId: string) {
+    if (confirmingDeleteId !== providerId) {
+      setError("");
+      setMessage(t.deletePending);
+      setConfirmingDeleteId(providerId);
+      return;
+    }
+
     setError("");
     setMessage("");
     setUpdatingProviderId(providerId);
     try {
       await deleteAIProvider(providerId);
       setProviders((current) => current.filter((provider) => provider.id !== providerId));
+      setConfirmingDeleteId(undefined);
       setMessage(t.deleted);
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, "AI provider request failed"));
@@ -183,6 +195,7 @@ export function ModelsTab() {
   async function handleTestProvider(providerId: string) {
     setError("");
     setMessage("");
+    setConfirmingDeleteId(undefined);
     setTestingProviderId(providerId);
     try {
       const result = await testAIProvider(providerId);
@@ -220,6 +233,7 @@ export function ModelsTab() {
         {providers.map((provider) => {
           const editing = editingProviderId === provider.id;
           const busy = updatingProviderId === provider.id || testingProviderId === provider.id;
+          const confirmingDelete = confirmingDeleteId === provider.id;
 
           return (
             <div key={provider.id} className="rounded-md border bg-background/70 p-4">
@@ -280,8 +294,14 @@ export function ModelsTab() {
                     </Button>
                     <Button type="button" size="sm" variant="destructive" onClick={() => void handleDelete(provider.id)} disabled={busy}>
                       <Trash2 className="h-4 w-4" />
-                      {t.delete}
+                      {confirmingDelete ? t.confirmDelete : t.delete}
                     </Button>
+                    {confirmingDelete ? (
+                      <Button type="button" size="sm" variant="outline" onClick={() => setConfirmingDeleteId(undefined)} disabled={busy}>
+                        <X className="h-4 w-4" />
+                        {t.cancel}
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               )}
