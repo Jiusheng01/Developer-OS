@@ -25,5 +25,5 @@ if ($DatabaseUrl.Trim()) {
 }
 
 Set-Location -LiteralPath $repoRoot
-& $pythonPath -m alembic -c backend\alembic.ini upgrade $Revision
+& $pythonPath -m app.infrastructure.database.migration_runner --config backend\alembic.ini --revision $Revision
 exit $LASTEXITCODE

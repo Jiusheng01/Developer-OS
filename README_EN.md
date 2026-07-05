@@ -64,6 +64,8 @@ Run database migrations:
 .\scripts\migrate-api-db.ps1
 ```
 
+If the default SQLite database was created by an earlier version, the script detects existing Dashboard tables without a valid Alembic revision, stamps them as the V3.0 baseline, then upgrades to the current head.
+
 Run from the repository root:
 
 ```powershell

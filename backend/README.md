@@ -62,6 +62,8 @@ Run database migrations:
 .\scripts\migrate-api-db.ps1
 ```
 
+For an existing local SQLite database created before Alembic, the migration runner detects Dashboard tables without a valid `alembic_version`, stamps the schema as the V3.0 baseline, and then upgrades to `head`. This preserves the local database file while bringing it under Alembic control.
+
 Health check:
 
 ```powershell

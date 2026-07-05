@@ -64,6 +64,8 @@ python -m pip install -e ".[dev]"
 .\scripts\migrate-api-db.ps1
 ```
 
+如果默认 SQLite 数据库是早期版本创建的，脚本会在检测到已有 Dashboard 表但缺少有效 Alembic 版本号时，先将旧 schema 标记为 V3.0 基线，再继续升级到当前版本。
+
 在项目根目录运行：
 
 ```powershell
