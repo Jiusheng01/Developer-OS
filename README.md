@@ -103,22 +103,10 @@ GET  /api/v1/auth/me
 .\scripts\dev-frontend-api.ps1
 ```
 
-检查后端健康状态：
-
-```powershell
-.\scripts\smoke-api-health.ps1
-```
-
 运行数据库迁移：
 
 ```powershell
 .\scripts\migrate-api-db.ps1
-```
-
-运行安全的后端接口增删改查冒烟检查。它会先注册或登录一个 smoke 用户，再为该用户创建待办事项、学习项、笔记、目标和目标拆解任务的临时检查数据，然后删除这些临时数据：
-
-```powershell
-.\scripts\smoke-api-crud.ps1
 ```
 
 V3.3 后，前端 API 模式会在 `/dashboard` 自动进入登录/注册流程。注册成功后会自动登录；如果后端关闭公开注册，前端会隐藏注册入口并提示使用已有账号登录。
@@ -144,71 +132,3 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev-backend.ps1
 修改 `NEXT_PUBLIC_API_BASE_URL` 后，需要停止并重启前端开发脚本。Next.js 会在开发服务启动时读取 `NEXT_PUBLIC_*` 变量。
 
 如果前端脚本提示已经有另一个 Next.js 开发服务在运行，先停止现有前端服务再切换模式。如果确认没有 Node 开发服务在运行，可以删除过期的 `frontend\.next\dev\lock` 文件，然后重新启动脚本。
-
-## V3 API 工作台冒烟检查清单
-
-当修改工作台数据访问逻辑，或验证全新环境时，使用这份清单。
-
-1. 在仓库根目录启动后端：
-
-   ```powershell
-   .\scripts\dev-backend.ps1
-   ```
-
-2. 验证健康状态：
-
-   ```powershell
-   .\scripts\smoke-api-health.ps1
-   ```
-
-3. 不打开浏览器，先验证后端接口增删改查：
-
-   ```powershell
-   .\scripts\smoke-api-crud.ps1
-   ```
-
-4. 以后端接口模式启动或重启前端：
-
-   ```powershell
-   .\scripts\dev-frontend-api.ps1
-   ```
-
-5. 打开 `http://127.0.0.1:3000/dashboard`，注册或登录一个账号。
-6. 创建并编辑一个待办事项、学习项、笔记、目标和目标拆解任务。
-7. 删除一个待办事项、学习项、笔记、目标和目标拆解任务。
-8. 刷新浏览器，确认仍处于登录态，且剩余数据来自后端接口数据源。
-9. 点击顶部退出登录，确认再次进入登录界面。
-
-### 设置页数据检查
-
-1. 打开设置页。
-2. 确认数据源标识为 API。
-3. 切换主题和语言，刷新后确认 UI 偏好仍保留。
-4. 使用重置工作台数据，并确认 Todo、Learning、Notes、Goals 等业务数据被后端重置。
-
-### 后端接口失败模式
-
-1. 停止后端。
-2. 打开 `/dashboard`。
-3. 未登录时确认登录界面显示 API 连接错误，而不是白屏。
-4. 已有有效登录态时，确认工作台显示非阻塞的数据错误。
-
-### SQLite 重置
-
-默认本地后端数据库是 `backend/developer_os.db`。当后端停止时，可以重置本地后端数据：
-
-```powershell
-.\scripts\reset-api-sqlite.ps1
-```
-
-## 质量检查
-
-```powershell
-backend\.venv\Scripts\python.exe -m compileall -q -x "backend[\\/](\.venv|\.pytest_cache)" backend
-backend\.venv\Scripts\python.exe -m pytest backend
-.\scripts\migrate-api-db.ps1 -DatabaseUrl "sqlite:///./backend/developer_os_migration_check.db"
-Remove-Item -LiteralPath backend\developer_os_migration_check.db -Force -ErrorAction SilentlyContinue
-npm run typecheck --prefix frontend
-npm run lint --prefix frontend
-npm run build --prefix frontend
-```

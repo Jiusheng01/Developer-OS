@@ -64,24 +64,6 @@ Run database migrations:
 
 For an existing local SQLite database created before Alembic, the migration runner detects Dashboard tables without a valid `alembic_version`, stamps the schema as the V3.0 baseline, and then upgrades to `head`. This preserves the local database file while bringing it under Alembic control.
 
-Health check:
-
-```powershell
-.\scripts\smoke-api-health.ps1
-```
-
-API CRUD smoke:
-
-```powershell
-.\scripts\smoke-api-crud.ps1
-```
-
-The CRUD smoke registers or logs in a smoke user before calling protected Dashboard endpoints. Override the smoke account when needed:
-
-```powershell
-.\scripts\smoke-api-crud.ps1 -Email "smoke@example.com" -Username "smoke_user" -Password "smoke-password"
-```
-
 ## Auth API
 
 Registration status:
@@ -167,20 +149,6 @@ Authorization: Bearer <accessToken>
 
 If `DEVELOPER_OS_PUBLIC_REGISTRATION_ENABLED=false`, the frontend hides the registration tab and asks the user to sign in with an existing account.
 
-## Validation
-
-```powershell
-backend\.venv\Scripts\python.exe -m compileall -q -x "backend[\\/](\.venv|\.pytest_cache)" backend
-backend\.venv\Scripts\python.exe -m pytest backend
-.\scripts\migrate-api-db.ps1 -DatabaseUrl "sqlite:///./backend/developer_os_migration_check.db"
-Remove-Item -LiteralPath backend\developer_os_migration_check.db -Force -ErrorAction SilentlyContinue
-npm run typecheck --prefix frontend
-npm run lint --prefix frontend
-npm run build --prefix frontend
-```
-
-The backend test suite covers health, auth registration/login/current-user behavior, migrations, Dashboard CRUD behavior, and cross-user isolation for Todo, Learning items, Notes, Goals, and nested goal tasks.
-
 ## Migrations
 
 Alembic is the schema source of truth starting in V3.0.
@@ -195,13 +163,6 @@ The script upgrades to `head` by default. To migrate to another revision:
 
 ```powershell
 .\scripts\migrate-api-db.ps1 -Revision 20260705_0001
-```
-
-To validate migrations against a temporary SQLite database:
-
-```powershell
-.\scripts\migrate-api-db.ps1 -DatabaseUrl "sqlite:///./backend/developer_os_migration_check.db"
-Remove-Item -LiteralPath backend\developer_os_migration_check.db -Force -ErrorAction SilentlyContinue
 ```
 
 V3.0 keeps startup table creation as a local compatibility fallback while migrations are introduced. For clean PostgreSQL databases, run Alembic before starting the API.
