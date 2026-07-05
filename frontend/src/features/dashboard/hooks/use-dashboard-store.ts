@@ -263,6 +263,16 @@ export function useDashboardStore() {
     });
   }, [commitBusiness, provider, runProviderAction]);
 
+  const deleteLearningItem = useCallback((id: string) => {
+    void runProviderAction(async () => {
+      await provider.learning.delete(id);
+      commitBusiness((current) => ({
+        ...current,
+        learningItems: current.learningItems.filter((item) => item.id !== id),
+      }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
+
   const addNote = useCallback((input: NoteInput) => {
     const title = input.title.trim();
     if (!title) return;
@@ -298,6 +308,13 @@ export function useDashboardStore() {
     });
   }, [commitBusiness, provider, runProviderAction]);
 
+  const deleteNote = useCallback((id: string) => {
+    void runProviderAction(async () => {
+      await provider.notes.delete(id);
+      commitBusiness((current) => ({ ...current, notes: current.notes.filter((note) => note.id !== id) }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
+
   const addGoal = useCallback((input: GoalInput) => {
     const title = input.title.trim();
     if (!title) return;
@@ -330,6 +347,13 @@ export function useDashboardStore() {
         ...current,
         goals: current.goals.map((existing) => (existing.id === id ? goal : existing)),
       }));
+    });
+  }, [commitBusiness, provider, runProviderAction]);
+
+  const deleteGoal = useCallback((id: string) => {
+    void runProviderAction(async () => {
+      await provider.goals.delete(id);
+      commitBusiness((current) => ({ ...current, goals: current.goals.filter((goal) => goal.id !== id) }));
     });
   }, [commitBusiness, provider, runProviderAction]);
 
@@ -443,10 +467,13 @@ export function useDashboardStore() {
     deleteTodo,
     addLearningItem,
     updateLearningItem,
+    deleteLearningItem,
     addNote,
     updateNote,
+    deleteNote,
     addGoal,
     updateGoal,
+    deleteGoal,
     addGoalTask,
     toggleGoalTask,
     deleteGoalTask,

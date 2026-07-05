@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { BookOpenCheck, Route } from "lucide-react";
+import { BookOpenCheck, Route, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,27 +81,32 @@ export function LearningTab({ store }: { store: DashboardStore }) {
         <AnimatePresence initial={false}>
           {store.state.learningItems.map((item) => (
             <DashboardListItemMotion key={item.id} className="grid gap-4 rounded-md border bg-background/70 p-4">
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_9rem_7rem]">
-                <Input value={item.title} onChange={(event) => store.updateLearningItem(item.id, { title: event.target.value })} aria-label={t.title} />
-                <Input value={item.area} onChange={(event) => store.updateLearningItem(item.id, { area: event.target.value })} aria-label={t.area} />
-                <select
-                  value={item.status}
-                  onChange={(event) => store.updateLearningItem(item.id, { status: readStatus(event.target.value) })}
-                  aria-label={t.status}
-                  className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {statusOptions.map((option) => (
-                    <option key={option} value={option}>{t.statusLabels[option]}</option>
-                  ))}
-                </select>
-                <Input
-                  value={item.progress}
-                  onChange={(event) => store.updateLearningItem(item.id, { progress: readProgress(event.target.value) })}
-                  min={0}
-                  max={100}
-                  type="number"
-                  aria-label={t.progress}
-                />
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="grid min-w-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_9rem_7rem]">
+                  <Input value={item.title} onChange={(event) => store.updateLearningItem(item.id, { title: event.target.value })} aria-label={t.title} />
+                  <Input value={item.area} onChange={(event) => store.updateLearningItem(item.id, { area: event.target.value })} aria-label={t.area} />
+                  <select
+                    value={item.status}
+                    onChange={(event) => store.updateLearningItem(item.id, { status: readStatus(event.target.value) })}
+                    aria-label={t.status}
+                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {statusOptions.map((option) => (
+                      <option key={option} value={option}>{t.statusLabels[option]}</option>
+                    ))}
+                  </select>
+                  <Input
+                    value={item.progress}
+                    onChange={(event) => store.updateLearningItem(item.id, { progress: readProgress(event.target.value) })}
+                    min={0}
+                    max={100}
+                    type="number"
+                    aria-label={t.progress}
+                  />
+                </div>
+                <Button type="button" variant="ghost" size="icon" onClick={() => store.deleteLearningItem(item.id)} aria-label={`${t.delete} ${item.title}`} className="self-end lg:self-start">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
               <div className="flex items-center gap-3">
                 <Progress value={item.progress} className="flex-1" />

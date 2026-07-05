@@ -114,7 +114,7 @@ When switching between local and API provider mode, stop and restart the fronten
 
 If a frontend script reports that another Next.js dev server may already be running, stop the existing frontend server before switching modes. If no Node dev server is running, remove the stale `frontend\.next\dev\lock` file and start the script again.
 
-## V2 Local/API Smoke Runbook
+## V2.3 Local/API Smoke Runbook
 
 Use this checklist when changing Dashboard data access or validating a fresh setup.
 
@@ -134,8 +134,9 @@ Use this checklist when changing Dashboard data access or validating a fresh set
    ```
 
 3. Open `http://127.0.0.1:3000/dashboard`.
-4. Create or edit one Todo, Learning item, Note, and Goal.
-5. Refresh the browser and verify the records remain available from browser storage.
+4. Create and edit one Todo, Learning item, Note, Goal, and Goal Task.
+5. Delete one Todo, Learning item, Note, Goal, and Goal Task.
+6. Refresh the browser and verify the remaining records are still available from browser storage.
 
 ### API mode
 
@@ -157,7 +158,20 @@ Use this checklist when changing Dashboard data access or validating a fresh set
    .\scripts\dev-frontend-api.ps1
    ```
 
-4. In `/dashboard`, create, update, delete, and refresh-check Todo, Learning, Notes, and Goals.
+4. In `/dashboard`, create and edit one Todo, Learning item, Note, Goal, and Goal Task.
+5. Delete one Todo, Learning item, Note, Goal, and Goal Task.
+6. Refresh the browser and verify the remaining records are still available from the API provider.
+
+### Settings data checks
+
+1. Open Settings.
+2. Confirm the provider badge matches the mode you started: Local or API.
+3. Generate an export JSON and copy it somewhere safe.
+4. Paste invalid JSON and verify the current workspace is not overwritten.
+5. Paste the generated export JSON and import it.
+6. Use Reset dashboard data only after the export check:
+   - Local mode resets this browser workspace.
+   - API mode resets provider-backed business data and returns this browser to first-run setup.
 
 ### API failure mode
 

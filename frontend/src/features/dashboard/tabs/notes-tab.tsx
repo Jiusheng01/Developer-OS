@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { NotebookText } from "lucide-react";
+import { NotebookText, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,7 +47,12 @@ export function NotesTab({ store }: { store: DashboardStore }) {
             <DashboardListItemMotion key={note.id}>
               <div className="rounded-md border bg-background/70 p-4">
                 <div className="grid gap-3">
-                  <Input value={note.title} onChange={(event) => store.updateNote(note.id, { title: event.target.value })} aria-label={t.title} />
+                  <div className="flex items-start gap-2">
+                    <Input value={note.title} onChange={(event) => store.updateNote(note.id, { title: event.target.value })} aria-label={t.title} className="min-w-0 flex-1" />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => store.deleteNote(note.id)} aria-label={`${t.delete} ${note.title}`} className="shrink-0">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Input value={note.category} onChange={(event) => store.updateNote(note.id, { category: event.target.value })} aria-label={t.category} />
                     <Input

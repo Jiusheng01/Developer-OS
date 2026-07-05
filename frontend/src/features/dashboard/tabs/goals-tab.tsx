@@ -91,7 +91,12 @@ export function GoalsTab({ store }: { store: DashboardStore }) {
                   <div className="grid gap-3">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <p className="text-base font-semibold">{goal.title}</p>
-                      <Badge variant={goal.status === "active" ? "default" : "secondary"}>{t.statusLabels[goal.status]}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={goal.status === "active" ? "default" : "secondary"}>{t.statusLabels[goal.status]}</Badge>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => store.deleteGoal(goal.id)} aria-label={`${t.deleteGoal} ${goal.title}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_7rem]">
                       <Input value={goal.title} onChange={(event) => store.updateGoal(goal.id, { title: event.target.value })} aria-label={t.title} />
