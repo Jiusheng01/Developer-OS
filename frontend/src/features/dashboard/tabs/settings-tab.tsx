@@ -1,10 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { ClipboardCopy, Database, Download, KeyRound, Languages, Palette, Trash2, Upload } from "lucide-react";
+import { ClipboardCopy, Database, Download, Languages, Palette, Trash2, Upload } from "lucide-react";
 import { LanguageToggle } from "@/components/shared/language-toggle";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DashboardPanelMotion } from "@/features/dashboard/components/dashboard-motion";
 import { DashboardProviderBadge } from "@/features/dashboard/components/dashboard-provider-badge";
@@ -22,8 +21,6 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
   const { locale } = useLocale();
   const dashboardCopy = copy[locale].dashboard;
   const t = dashboardCopy.settings;
-  const [passcode, setPasscode] = useState("");
-  const [message, setMessage] = useState("");
   const [exportText, setExportText] = useState("");
   const [importText, setImportText] = useState("");
   const [dataMessage, setDataMessage] = useState("");
@@ -35,13 +32,6 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
     "invalid-source": t.importInvalidSource,
     "invalid-shape": t.importInvalidShape,
   };
-
-  function handlePasscode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const ok = store.updatePasscode(passcode);
-    setMessage(ok ? t.passcodeUpdated : t.passcodeShort);
-    if (ok) setPasscode("");
-  }
 
   async function handleGenerateExport() {
     setResetArmed(false);
@@ -113,16 +103,6 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
               detail={store.dataError}
               variant={store.dataError ? "warning" : "ok"}
             />
-          </DashboardSection>
-        </DashboardPanelMotion>
-
-        <DashboardPanelMotion>
-          <DashboardSection title={t.passcode} description={t.passcodeDescription} icon={KeyRound}>
-            <form className="grid gap-3" onSubmit={handlePasscode}>
-              <Input value={passcode} onChange={(event) => setPasscode(event.target.value)} type="password" placeholder={t.newPasscode} aria-label={t.newPasscode} />
-              <Button type="submit">{t.updatePasscode}</Button>
-              {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
-            </form>
           </DashboardSection>
         </DashboardPanelMotion>
 

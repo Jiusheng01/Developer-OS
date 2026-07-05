@@ -31,7 +31,7 @@ V3.0 keeps the public site static-data driven and adds migration-backed database
 
 The backend still defaults to SQLite and now uses Alembic as the schema source of truth. Set `DEVELOPER_OS_DATABASE_URL` to switch to a local PostgreSQL database. V3 does not introduce Docker. V3.1 adds JWT auth and public registration; V3.2 scopes Dashboard business APIs to the current user; V3.3 adds the frontend login/register experience.
 
-In API mode, the frontend shows login/register before the Dashboard and automatically attaches the bearer token to business API requests. Local mode still uses the browser-local passcode. Theme, locale, and active tab remain browser-local.
+In API mode, the frontend shows login/register before the Dashboard and automatically attaches the bearer token to business API requests. Local mode no longer uses a passcode gate and opens `/dashboard` directly. Theme, locale, and active tab remain browser-local.
 
 ## Frontend
 

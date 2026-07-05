@@ -18,20 +18,19 @@ export function DashboardHeader({
   dataError,
   theme,
   onThemeChange,
-  onLock,
+  onSignOut,
 }: {
   activeTab: DashboardTab;
   providerMode: DashboardDataProviderMode;
   dataError?: string;
   theme: ThemePreference;
   onThemeChange: (theme: ThemePreference) => void;
-  onLock: () => void;
+  onSignOut?: () => void;
 }) {
   const { locale } = useLocale();
   const t = copy[locale].dashboard;
   const nextTheme = theme === "dark" ? "light" : "dark";
   const ThemeIcon = theme === "dark" ? Sun : Moon;
-  const lockLabel = providerMode === "api" ? t.auth.signOut : t.lock;
 
   return (
     <header className="flex flex-col gap-4 border-b bg-background/90 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between lg:px-6">
@@ -63,10 +62,12 @@ export function DashboardHeader({
           <ThemeIcon className="h-4 w-4" />
           <span className="hidden sm:inline">{nextTheme === "dark" ? t.dark : t.light}</span>
         </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={onLock} aria-label={lockLabel}>
-          <LogOut className="h-4 w-4" />
-          <span className="hidden sm:inline">{lockLabel}</span>
-        </Button>
+        {providerMode === "api" && onSignOut ? (
+          <Button type="button" variant="ghost" size="sm" onClick={onSignOut} aria-label={t.auth.signOut}>
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">{t.auth.signOut}</span>
+          </Button>
+        ) : null}
       </div>
     </header>
   );

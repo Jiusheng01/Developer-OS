@@ -78,7 +78,6 @@ export type GoalPatch = Partial<GoalInput>;
 export type DashboardState = {
   version: 2;
   access: {
-    passcodeHash?: string;
     unlocked: boolean;
   };
   preferences: {

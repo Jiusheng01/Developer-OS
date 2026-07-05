@@ -2,7 +2,6 @@
 
 import { AuthGate } from "@/features/auth/components/auth-gate";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { AccessGate } from "@/features/dashboard/components/access-gate";
 import { DashboardHeader } from "@/features/dashboard/components/dashboard-header";
 import { DashboardSidebar } from "@/features/dashboard/components/dashboard-sidebar";
 import { DashboardTabTransition } from "@/features/dashboard/components/dashboard-motion";
@@ -29,15 +28,15 @@ export function DashboardShell() {
     );
   }
 
-  return <DashboardWorkspace requireLocalAccess />;
+  return <DashboardWorkspace />;
 }
 
 function AuthenticatedDashboardShell() {
   const auth = useAuth();
-  return <DashboardWorkspace requireLocalAccess={false} onLock={auth.logout} />;
+  return <DashboardWorkspace onSignOut={auth.logout} />;
 }
 
-function DashboardWorkspace({ requireLocalAccess, onLock }: { requireLocalAccess: boolean; onLock?: () => void }) {
+function DashboardWorkspace({ onSignOut }: { onSignOut?: () => void }) {
   const store = useDashboardStore();
   const { locale } = useLocale();
   const t = copy[locale].dashboard;
@@ -53,10 +52,6 @@ function DashboardWorkspace({ requireLocalAccess, onLock }: { requireLocalAccess
     );
   }
 
-  if (requireLocalAccess && (!store.hasPasscode || !store.state.access.unlocked)) {
-    return <AccessGate hasPasscode={store.hasPasscode} onCreatePasscode={store.createPasscode} onUnlock={store.unlock} />;
-  }
-
   return (
     <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[16rem_1fr]">
       <DashboardSidebar activeTab={store.activeTab} providerMode={store.providerMode} onSelect={store.setActiveTab} />
@@ -67,7 +62,7 @@ function DashboardWorkspace({ requireLocalAccess, onLock }: { requireLocalAccess
           dataError={store.dataError}
           theme={store.state.preferences.theme}
           onThemeChange={store.setTheme}
-          onLock={onLock ?? store.lock}
+          onSignOut={onSignOut}
         />
         <main className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-5 lg:px-6">
           {store.dataError ? (

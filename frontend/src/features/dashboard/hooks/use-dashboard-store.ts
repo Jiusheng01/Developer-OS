@@ -25,14 +25,6 @@ import type {
 } from "@/features/dashboard/types";
 import { applyTheme, type ThemePreference } from "@/lib/theme/theme-provider";
 
-function hashPasscode(value: string) {
-  let hash = 5381;
-  for (const char of value) {
-    hash = (hash * 33) ^ char.charCodeAt(0);
-  }
-  return `local-${(hash >>> 0).toString(16)}`;
-}
-
 function cleanTags(tags: string[]) {
   const seen = new Set<string>();
   return tags
@@ -137,32 +129,7 @@ export function useDashboardStore() {
     }
   }, []);
 
-  const hasPasscode = Boolean(state.access.passcodeHash);
   const activeTab = state.preferences.activeTab;
-
-  const createPasscode = useCallback((passcode: string) => {
-    const trimmed = passcode.trim();
-    if (trimmed.length < 4) return false;
-    commitLocal((current) => ({
-      ...current,
-      access: {
-        passcodeHash: hashPasscode(trimmed),
-        unlocked: true,
-      },
-    }));
-    return true;
-  }, [commitLocal]);
-
-  const unlock = useCallback((passcode: string) => {
-    const trimmed = passcode.trim();
-    if (!state.access.passcodeHash || hashPasscode(trimmed) !== state.access.passcodeHash) return false;
-    setState((current) => ({ ...current, access: { ...current.access, unlocked: true } }));
-    return true;
-  }, [state.access.passcodeHash]);
-
-  const lock = useCallback(() => {
-    setState((current) => ({ ...current, access: { ...current.access, unlocked: false } }));
-  }, []);
 
   const setActiveTab = useCallback((tab: DashboardTab) => {
     commitLocal((current) => ({ ...current, preferences: { ...current.preferences, activeTab: tab } }));
@@ -405,8 +372,6 @@ export function useDashboardStore() {
     });
   }, [commitBusiness, provider, runProviderAction]);
 
-  const updatePasscode = useCallback((passcode: string) => createPasscode(passcode), [createPasscode]);
-
   const clearData = useCallback(() => {
     void runProviderAction(async () => {
       const snapshot = await provider.resetData();
@@ -422,13 +387,7 @@ export function useDashboardStore() {
     const result = await provider.importData(raw);
     if (!result.ok) return result;
 
-    const nextState: DashboardState = {
-      ...result.state,
-      access: {
-        ...result.state.access,
-        unlocked: true,
-      },
-    };
+    const nextState: DashboardState = result.state;
 
     saveDashboardState(nextState);
     setState(nextState);
@@ -453,12 +412,8 @@ export function useDashboardStore() {
     hydrated: browserHydrated && dataHydrated,
     dataError,
     providerMode,
-    hasPasscode,
     activeTab,
     summary,
-    createPasscode,
-    unlock,
-    lock,
     setActiveTab,
     setTheme,
     addTodo,
@@ -477,7 +432,6 @@ export function useDashboardStore() {
     addGoalTask,
     toggleGoalTask,
     deleteGoalTask,
-    updatePasscode,
     clearData,
     exportDashboardData,
     importDashboardData,

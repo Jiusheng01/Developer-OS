@@ -11,7 +11,7 @@ V3 persists Dashboard business data with FastAPI, SQLAlchemy, SQLite by default,
 - Notes
 - Goals and goal tasks
 
-Local mode passcode, theme, language, and active tab remain browser-local. PostgreSQL is supported through `DEVELOPER_OS_DATABASE_URL`. Docker is intentionally out of scope for V3. Frontend API mode now uses the V3.3 login/register gate.
+Local mode opens the Dashboard directly; theme, language, and active tab remain browser-local. PostgreSQL is supported through `DEVELOPER_OS_DATABASE_URL`. Docker is intentionally out of scope for V3. Frontend API mode now uses the V3.3 login/register gate.
 
 ## Setup
 

@@ -27,8 +27,8 @@ export const projects: Project[] = [
       zh: "把公开成长信号和私有学习工作台合在一起。",
     },
     nextStep: {
-      en: "Ship the public shell, dashboard gate, Todo, and Learning modules.",
-      zh: "交付公开站点、Dashboard 门禁、Todo 和 Learning 模块。",
+      en: "Ship the public shell, Dashboard workspace, Todo, and Learning modules.",
+      zh: "交付公开站点、Dashboard 工作台、Todo 和 Learning 模块。",
     },
   },
   {

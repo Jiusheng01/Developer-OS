@@ -155,13 +155,11 @@ export function normalizeDashboardState(value: unknown): DashboardState {
   const fallback = createDefaultDashboardState();
   if (!isRecord(value)) return fallback;
 
-  const access = isRecord(value.access) ? value.access : {};
   const preferences = isRecord(value.preferences) ? value.preferences : {};
 
   return {
     version: 2,
     access: {
-      passcodeHash: typeof access.passcodeHash === "string" ? access.passcodeHash : undefined,
       unlocked: false,
     },
     preferences: {

@@ -31,7 +31,7 @@ V3.0 保持公开站点由静态结构化数据驱动，同时为工作台业务
 
 后端默认仍使用 SQLite，并通过 Alembic 管理 schema；需要时可通过 `DEVELOPER_OS_DATABASE_URL` 切换到本机 PostgreSQL。V3 暂不引入 Docker。V3.1 已加入 JWT 认证和公开注册；V3.2 已让 Dashboard 业务 API 按当前用户隔离；V3.3 已接入前端登录/注册体验。
 
-API 模式下，前端会先显示登录/注册界面，登录成功后 Dashboard 请求会自动携带 Bearer token。本地存储模式仍使用浏览器本地口令。主题、语言和当前标签页仍然保存在浏览器本地。
+API 模式下，前端会先显示登录/注册界面，登录成功后 Dashboard 请求会自动携带 Bearer token。本地存储模式不再使用口令门禁，打开 `/dashboard` 后直接进入工作台。主题、语言和当前标签页仍然保存在浏览器本地。
 
 ## 前端
 
