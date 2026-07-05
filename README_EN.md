@@ -29,7 +29,7 @@ V3.0 keeps the public site static-data driven and adds migration-backed database
 - Notes
 - Goals and goal tasks
 
-The backend still defaults to SQLite and now uses Alembic as the schema source of truth. Set `DEVELOPER_OS_DATABASE_URL` to switch to a local PostgreSQL database. V3 does not introduce Docker. JWT, user-scoped Dashboard data, and frontend auth continue in V3.1-V3.3.
+The backend still defaults to SQLite and now uses Alembic as the schema source of truth. Set `DEVELOPER_OS_DATABASE_URL` to switch to a local PostgreSQL database. V3 does not introduce Docker. V3.1 adds JWT auth and public registration; user-scoped Dashboard data and frontend auth continue in V3.2-V3.3.
 
 Passcode, theme, locale, and active tab remain browser-local.
 
@@ -75,6 +75,17 @@ Health check:
 ```text
 GET http://127.0.0.1:8000/api/v1/health
 ```
+
+Auth endpoints:
+
+```text
+GET  /api/v1/auth/registration-status
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+GET  /api/v1/auth/me
+```
+
+Public registration is enabled by default and can be disabled with `DEVELOPER_OS_PUBLIC_REGISTRATION_ENABLED=false`. Configure the JWT signing secret with `DEVELOPER_OS_JWT_SECRET_KEY`.
 
 ## Recommended Development Scripts
 

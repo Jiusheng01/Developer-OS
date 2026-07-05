@@ -30,7 +30,11 @@ def test_alembic_initial_migration_creates_dashboard_tables(tmp_path: Path, monk
                 "learning_items",
                 "notes",
                 "todos",
+                "users",
             }.issubset(set(inspector.get_table_names()))
+
+            user_indexes = {index["name"] for index in inspector.get_indexes("users")}
+            assert {"ix_users_email", "ix_users_username"}.issubset(user_indexes)
         finally:
             engine.dispose()
     finally:

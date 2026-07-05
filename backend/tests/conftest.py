@@ -12,9 +12,19 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.api.deps import get_db_session  # noqa: E402
+from app.core.config import get_settings  # noqa: E402
 from app.infrastructure.database.base import Base  # noqa: E402
 from app.infrastructure.database import models  # noqa: F401,E402
 from app.main import create_app  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def clear_settings_cache() -> Generator[None, None, None]:
+    get_settings.cache_clear()
+    try:
+        yield
+    finally:
+        get_settings.cache_clear()
 
 
 @pytest.fixture

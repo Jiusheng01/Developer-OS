@@ -29,7 +29,7 @@ V3.0 保持公开站点由静态结构化数据驱动，同时为工作台业务
 - 笔记
 - 目标和目标拆解任务
 
-后端默认仍使用 SQLite，并通过 Alembic 管理 schema；需要时可通过 `DEVELOPER_OS_DATABASE_URL` 切换到本机 PostgreSQL。V3 暂不引入 Docker。JWT、用户数据隔离和前端登录体验会在 V3.1-V3.3 继续实现。
+后端默认仍使用 SQLite，并通过 Alembic 管理 schema；需要时可通过 `DEVELOPER_OS_DATABASE_URL` 切换到本机 PostgreSQL。V3 暂不引入 Docker。V3.1 已加入 JWT 认证和公开注册；Dashboard 用户数据隔离和前端登录体验会在 V3.2-V3.3 继续实现。
 
 本地口令、主题、语言和当前标签页仍然保存在浏览器本地。
 
@@ -75,6 +75,17 @@ backend\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --rel
 ```text
 GET http://127.0.0.1:8000/api/v1/health
 ```
+
+认证接口：
+
+```text
+GET  /api/v1/auth/registration-status
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+GET  /api/v1/auth/me
+```
+
+公开注册默认开启，可通过 `DEVELOPER_OS_PUBLIC_REGISTRATION_ENABLED=false` 关闭。JWT 密钥通过 `DEVELOPER_OS_JWT_SECRET_KEY` 配置。
 
 ## 推荐开发脚本
 

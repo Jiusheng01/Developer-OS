@@ -4,14 +4,14 @@ FastAPI backend for Developer OS V3.
 
 ## Scope
 
-V3.0 persists Dashboard business data with FastAPI, SQLAlchemy, SQLite by default, and Alembic-managed migrations:
+V3 persists Dashboard business data with FastAPI, SQLAlchemy, SQLite by default, Alembic-managed migrations, and JWT authentication:
 
 - Todo
 - Learning items
 - Notes
 - Goals and goal tasks
 
-Local passcode, theme, language, and active tab remain browser-local. PostgreSQL is supported through `DEVELOPER_OS_DATABASE_URL`. Docker is intentionally out of scope for V3. JWT, user isolation, and frontend auth continue in V3.1-V3.3.
+Local passcode, theme, language, and active tab remain browser-local. PostgreSQL is supported through `DEVELOPER_OS_DATABASE_URL`. Docker is intentionally out of scope for V3. User-scoped Dashboard data and frontend auth continue in V3.2-V3.3.
 
 ## Setup
 
@@ -37,6 +37,17 @@ DEVELOPER_OS_DATABASE_URL=postgresql+psycopg://developer_os:developer_os@localho
 
 The PostgreSQL server and database/user are expected to exist locally; this project does not add Docker in V3.
 
+Auth settings:
+
+```text
+DEVELOPER_OS_JWT_SECRET_KEY=developer-os-local-secret-change-me
+DEVELOPER_OS_JWT_ALGORITHM=HS256
+DEVELOPER_OS_JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+DEVELOPER_OS_PUBLIC_REGISTRATION_ENABLED=true
+```
+
+Use a strong `DEVELOPER_OS_JWT_SECRET_KEY` outside local development. Public registration is enabled by default in V3.1 and can be disabled without code changes.
+
 ## Run
 
 From the repository root:
@@ -61,6 +72,43 @@ API CRUD smoke:
 
 ```powershell
 .\scripts\smoke-api-crud.ps1
+```
+
+## Auth API
+
+Registration status:
+
+```text
+GET /api/v1/auth/registration-status
+```
+
+Register:
+
+```text
+POST /api/v1/auth/register
+{
+  "email": "dev@example.com",
+  "username": "devuser",
+  "password": "strong-password",
+  "displayName": "Developer"
+}
+```
+
+Login:
+
+```text
+POST /api/v1/auth/login
+{
+  "identifier": "dev@example.com",
+  "password": "strong-password"
+}
+```
+
+Current user:
+
+```text
+GET /api/v1/auth/me
+Authorization: Bearer <accessToken>
 ```
 
 The default SQLite database path is:
@@ -98,7 +146,7 @@ npm run lint --prefix frontend
 npm run build --prefix frontend
 ```
 
-The backend test suite covers health plus Dashboard CRUD behavior for Todo, Learning items, Notes, Goals, and nested goal tasks.
+The backend test suite covers health, auth registration/login/current-user behavior, migrations, plus Dashboard CRUD behavior for Todo, Learning items, Notes, Goals, and nested goal tasks.
 
 ## Migrations
 
