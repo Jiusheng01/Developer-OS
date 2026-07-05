@@ -10,6 +10,7 @@ from app.domain.ai.entities import (
     LLMJsonRequest,
     LearningGoalInput,
     LearningPlanDraft,
+    PlannerCommitResult,
     PlanGoal,
     PlanLearningItem,
     PlanNotePrompt,
@@ -17,6 +18,8 @@ from app.domain.ai.entities import (
 )
 from app.domain.ai.providers import LLMProviderFactory
 from app.domain.ai.repositories import AIRepository
+from app.domain.ai.unit_of_work import UnitOfWork
+from app.domain.dashboard.services import DashboardService
 
 PROVIDER_TYPES: tuple[AIProviderType, ...] = ("openai_compatible",)
 LEARNING_STATUSES = ("queued", "active", "review", "done")
@@ -200,9 +203,17 @@ class AIProviderService:
 
 
 class AIPlannerService:
-    def __init__(self, repository: AIRepository, provider_factory: LLMProviderFactory) -> None:
+    def __init__(
+        self,
+        repository: AIRepository,
+        provider_factory: LLMProviderFactory,
+        dashboard_service: DashboardService | None = None,
+        unit_of_work: UnitOfWork | None = None,
+    ) -> None:
         self._repository = repository
         self._provider_factory = provider_factory
+        self._dashboard_service = dashboard_service
+        self._unit_of_work = unit_of_work
 
     def generate_plan(self, user_id: str, data: Mapping[str, object]) -> LearningPlanDraft:
         goal_input = LearningGoalInput(
@@ -226,7 +237,81 @@ class AIPlannerService:
             )
         )
         draft = _plan_draft_from_payload(user_id, raw_plan)
-        return self._repository.create_plan_draft(draft)
+        created = self._repository.create_plan_draft(draft)
+        if self._unit_of_work is not None:
+            self._unit_of_work.commit()
+        return created
+
+    def commit_plan(self, user_id: str, draft_id: str) -> PlannerCommitResult:
+        if self._dashboard_service is None:
+            raise ValidationError("planner commit is not configured")
+        draft = self._repository.get_plan_draft(user_id, draft_id)
+        if draft is None:
+            raise ResourceNotFoundError("ai plan draft", draft_id)
+        if draft.status == "committed":
+            raise ValidationError("AI plan draft is already committed")
+
+        try:
+            for goal in draft.goals:
+                self._dashboard_service.create_goal(
+                    user_id,
+                    {
+                        "title": goal.title,
+                        "progress": 0,
+                        "status": "active",
+                        "target_year": goal.target_year,
+                    },
+                )
+            for item in draft.learning_items:
+                self._dashboard_service.create_learning_item(
+                    user_id,
+                    {
+                        "title": item.title,
+                        "area": item.area,
+                        "status": item.status,
+                        "progress": item.progress,
+                        "notes": item.notes,
+                        "tags": item.tags,
+                    },
+                )
+            for todo in draft.todos:
+                self._dashboard_service.create_todo(
+                    user_id,
+                    {
+                        "title": todo.title,
+                        "priority": todo.priority,
+                        "tags": todo.tags,
+                        "due_date": todo.due_date,
+                    },
+                )
+            for prompt in draft.note_prompts:
+                self._dashboard_service.create_note(
+                    user_id,
+                    {
+                        "title": prompt.title,
+                        "body": prompt.prompt,
+                        "category": prompt.category,
+                        "tags": prompt.tags,
+                    },
+                )
+            updated = self._repository.update_plan_draft_status(user_id, draft_id, "committed")
+            if updated is None:
+                raise ResourceNotFoundError("ai plan draft", draft_id)
+            if self._unit_of_work is not None:
+                self._unit_of_work.commit()
+        except Exception:
+            if self._unit_of_work is not None:
+                self._unit_of_work.rollback()
+            raise
+
+        return PlannerCommitResult(
+            draft_id=draft.id,
+            status="committed",
+            goals_created=len(draft.goals),
+            learning_items_created=len(draft.learning_items),
+            todos_created=len(draft.todos),
+            notes_created=len(draft.note_prompts),
+        )
 
 
 def _planner_system_prompt() -> str:

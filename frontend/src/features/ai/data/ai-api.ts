@@ -1,5 +1,12 @@
 import { apiRequest } from "@/lib/api/http-client";
-import type { AIProviderConfig, AIProviderInput, AIProviderPatch, LearningGoalInput, LearningPlanDraft } from "./types";
+import type {
+  AIProviderConfig,
+  AIProviderInput,
+  AIProviderPatch,
+  LearningGoalInput,
+  LearningPlanDraft,
+  PlannerCommitResult,
+} from "./types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -72,6 +79,18 @@ function normalizePlanDraft(value: unknown): LearningPlanDraft {
   };
 }
 
+function normalizeCommitResult(value: unknown): PlannerCommitResult {
+  if (!isRecord(value)) throw new Error("Invalid planner commit payload");
+  return {
+    draftId: stringValue(value.draftId),
+    status: stringValue(value.status),
+    goalsCreated: typeof value.goalsCreated === "number" ? value.goalsCreated : 0,
+    learningItemsCreated: typeof value.learningItemsCreated === "number" ? value.learningItemsCreated : 0,
+    todosCreated: typeof value.todosCreated === "number" ? value.todosCreated : 0,
+    notesCreated: typeof value.notesCreated === "number" ? value.notesCreated : 0,
+  };
+}
+
 function encodeBody(value: unknown) {
   return JSON.stringify(value);
 }
@@ -101,5 +120,11 @@ export async function setDefaultAIProvider(id: string) {
 export async function generateLearningPlan(input: LearningGoalInput) {
   return normalizePlanDraft(
     await apiRequest<unknown>("/ai/planner/generate", { method: "POST", body: encodeBody(input) }),
+  );
+}
+
+export async function commitLearningPlanDraft(draftId: string) {
+  return normalizeCommitResult(
+    await apiRequest<unknown>(`/ai/planner/drafts/${draftId}/commit`, { method: "POST" }),
   );
 }

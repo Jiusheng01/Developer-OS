@@ -75,7 +75,7 @@ function DashboardWorkspace({ onSignOut }: { onSignOut?: () => void }) {
           ) : null}
           <DashboardTabTransition activeKey={store.activeTab}>
             {store.activeTab === "today" ? <TodayTab store={store} /> : null}
-            {store.activeTab === "planner" ? <PlannerTab /> : null}
+            {store.activeTab === "planner" ? <PlannerTab store={store} /> : null}
             {store.activeTab === "todo" ? <TodoTab store={store} /> : null}
             {store.activeTab === "learning" ? <LearningTab store={store} /> : null}
             {store.activeTab === "notes" ? <NotesTab store={store} /> : null}

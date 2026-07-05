@@ -49,8 +49,23 @@ def _apply_changes(model: object, changes: Mapping[str, object]) -> None:
 
 
 class SQLAlchemyDashboardRepository:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, auto_commit: bool = True) -> None:
         self._session = session
+        self._auto_commit = auto_commit
+
+    def _save(self, model: object) -> None:
+        if self._auto_commit:
+            self._session.commit()
+        else:
+            self._session.flush()
+        self._session.refresh(model)
+
+    def _delete(self, model: object) -> None:
+        self._session.delete(model)
+        if self._auto_commit:
+            self._session.commit()
+        else:
+            self._session.flush()
 
     def list_todos(self, user_id: str) -> Sequence[Todo]:
         models = self._session.scalars(
@@ -73,8 +88,7 @@ class SQLAlchemyDashboardRepository:
             updated_at=todo.updated_at,
         )
         self._session.add(model)
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
         return self._todo_from_model(model)
 
     def update_todo(self, user_id: str, todo_id: str, changes: Mapping[str, object]) -> Todo | None:
@@ -82,16 +96,14 @@ class SQLAlchemyDashboardRepository:
         if model is None:
             return None
         _apply_changes(model, changes)
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
         return self._todo_from_model(model)
 
     def delete_todo(self, user_id: str, todo_id: str) -> bool:
         model = self._session.scalar(select(TodoModel).where(TodoModel.id == todo_id, TodoModel.user_id == user_id))
         if model is None:
             return False
-        self._session.delete(model)
-        self._session.commit()
+        self._delete(model)
         return True
 
     def list_learning_items(self, user_id: str) -> Sequence[LearningItem]:
@@ -115,8 +127,7 @@ class SQLAlchemyDashboardRepository:
             updated_at=item.updated_at,
         )
         self._session.add(model)
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
         return self._learning_from_model(model)
 
     def update_learning_item(self, user_id: str, item_id: str, changes: Mapping[str, object]) -> LearningItem | None:
@@ -126,8 +137,7 @@ class SQLAlchemyDashboardRepository:
         if model is None:
             return None
         _apply_changes(model, changes)
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
         return self._learning_from_model(model)
 
     def delete_learning_item(self, user_id: str, item_id: str) -> bool:
@@ -136,8 +146,7 @@ class SQLAlchemyDashboardRepository:
         )
         if model is None:
             return False
-        self._session.delete(model)
-        self._session.commit()
+        self._delete(model)
         return True
 
     def list_notes(self, user_id: str) -> Sequence[Note]:
@@ -157,8 +166,7 @@ class SQLAlchemyDashboardRepository:
             updated_at=note.updated_at,
         )
         self._session.add(model)
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
         return self._note_from_model(model)
 
     def update_note(self, user_id: str, note_id: str, changes: Mapping[str, object]) -> Note | None:
@@ -166,16 +174,14 @@ class SQLAlchemyDashboardRepository:
         if model is None:
             return None
         _apply_changes(model, changes)
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
         return self._note_from_model(model)
 
     def delete_note(self, user_id: str, note_id: str) -> bool:
         model = self._session.scalar(select(NoteModel).where(NoteModel.id == note_id, NoteModel.user_id == user_id))
         if model is None:
             return False
-        self._session.delete(model)
-        self._session.commit()
+        self._delete(model)
         return True
 
     def list_goals(self, user_id: str) -> Sequence[Goal]:
@@ -197,8 +203,7 @@ class SQLAlchemyDashboardRepository:
             target_year=goal.target_year,
         )
         self._session.add(model)
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
         return self._goal_from_model(model)
 
     def update_goal(self, user_id: str, goal_id: str, changes: Mapping[str, object]) -> Goal | None:
@@ -206,16 +211,14 @@ class SQLAlchemyDashboardRepository:
         if model is None:
             return None
         _apply_changes(model, changes)
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
         return self._goal_from_model(model)
 
     def delete_goal(self, user_id: str, goal_id: str) -> bool:
         model = self._session.scalar(select(GoalModel).where(GoalModel.id == goal_id, GoalModel.user_id == user_id))
         if model is None:
             return False
-        self._session.delete(model)
-        self._session.commit()
+        self._delete(model)
         return True
 
     def create_goal_task(self, user_id: str, task: GoalTask) -> GoalTask | None:
@@ -229,8 +232,7 @@ class SQLAlchemyDashboardRepository:
             done=task.done,
         )
         self._session.add(model)
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
         return self._goal_task_from_model(model)
 
     def update_goal_task(
@@ -248,8 +250,7 @@ class SQLAlchemyDashboardRepository:
         if model is None:
             return None
         _apply_changes(model, changes)
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
         return self._goal_task_from_model(model)
 
     def delete_goal_task(self, user_id: str, goal_id: str, task_id: str) -> bool:
@@ -260,8 +261,7 @@ class SQLAlchemyDashboardRepository:
         )
         if model is None:
             return False
-        self._session.delete(model)
-        self._session.commit()
+        self._delete(model)
         return True
 
     @staticmethod

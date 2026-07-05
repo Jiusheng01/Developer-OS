@@ -17,7 +17,7 @@ Developer OS 是产品形态：公开个人站点 + 私人工作台。
 - AI Planner：输入学习目标、当前水平、截止日期、每周时间和偏好技术栈，生成结构化学习计划草稿。
 - AI Providers：配置 OpenAI 兼容 Provider 的 Base URL、API Key 和 Model。
 - 后端统一 AI Service / LLM Provider 边界：前端只调用 FastAPI，不直接请求模型接口。
-- Planner 草稿持久化：LLM 只返回结构化计划，后续再由 Planner Service 校验后写入 Goals、Learning、Todo、Notes。
+- Planner 草稿持久化与导入：LLM 只返回结构化计划，用户确认后由 Planner Service 校验并调用领域服务写入 Goals、Learning、Todo、Notes。
 
 早期 V4 只实现 Planner，不提前开发 Reviewer、Coach、Summarizer 等未来 Agent。
 
@@ -114,9 +114,10 @@ PATCH  /api/v1/ai/providers/{providerId}
 POST   /api/v1/ai/providers/{providerId}/default
 DELETE /api/v1/ai/providers/{providerId}
 POST   /api/v1/ai/planner/generate
+POST   /api/v1/ai/planner/drafts/{draftId}/commit
 ```
 
-这些接口都需要 Bearer token。Planner 当前生成结构化草稿，不会直接把内容写入 Todo、Learning、Notes、Goals。
+这些接口都需要 Bearer token。Planner 先生成结构化草稿，调用 commit 后通过后端领域服务写入 Todo、Learning、Notes、Goals。
 
 ## 推荐开发脚本
 

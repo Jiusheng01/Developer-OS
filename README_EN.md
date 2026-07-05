@@ -17,7 +17,7 @@ The current V4 foundation adds:
 - AI Planner: enter a learning goal, current level, deadline, weekly hours, and preferred stack to generate a structured learning plan draft.
 - AI Providers: configure OpenAI-compatible Base URL, API Key, and Model.
 - Unified backend AI Service / LLM Provider boundary: the frontend calls FastAPI only and never calls model APIs directly.
-- Planner draft persistence: the LLM returns structured planning data; later Planner Service iterations will validate and write into Goals, Learning, Todo, and Notes.
+- Planner draft persistence and import: the LLM returns structured planning data; after user confirmation, Planner Service validates it and writes into Goals, Learning, Todo, and Notes through domain services.
 
 Early V4 implements Planner only. Future agents such as Reviewer, Coach, and Summarizer are reserved but not implemented yet.
 
@@ -114,9 +114,10 @@ PATCH  /api/v1/ai/providers/{providerId}
 POST   /api/v1/ai/providers/{providerId}/default
 DELETE /api/v1/ai/providers/{providerId}
 POST   /api/v1/ai/planner/generate
+POST   /api/v1/ai/planner/drafts/{draftId}/commit
 ```
 
-These endpoints require a bearer token. Planner currently generates a structured draft and does not directly write into Todo, Learning, Notes, or Goals.
+These endpoints require a bearer token. Planner first generates a structured draft; commit writes it into Todo, Learning, Notes, and Goals through backend domain services.
 
 ## Recommended Development Scripts
 

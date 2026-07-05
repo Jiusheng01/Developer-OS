@@ -6,7 +6,10 @@ from app.api.deps import get_ai_planner_service, get_db_session
 from app.domain.ai.entities import AIProviderConfig, LLMJsonRequest
 from app.domain.ai.providers import LLMProvider
 from app.domain.ai.services import AIPlannerService
+from app.domain.dashboard.services import DashboardService
+from app.infrastructure.database.unit_of_work import SQLAlchemyUnitOfWork
 from app.infrastructure.repositories.sqlalchemy_ai_repository import SQLAlchemyAIRepository
+from app.infrastructure.repositories.sqlalchemy_dashboard_repository import SQLAlchemyDashboardRepository
 
 
 class FakePlannerProvider:
@@ -55,6 +58,23 @@ def provider_payload(**overrides):
     }
     payload.update(overrides)
     return payload
+
+
+def get_fake_planner_service(session: Session = Depends(get_db_session)) -> AIPlannerService:
+    ai_repository = SQLAlchemyAIRepository(session, auto_commit=False)
+    dashboard_repository = SQLAlchemyDashboardRepository(session, auto_commit=False)
+    dashboard_service = DashboardService(
+        dashboard_repository,
+        dashboard_repository,
+        dashboard_repository,
+        dashboard_repository,
+    )
+    return AIPlannerService(
+        ai_repository,
+        FakePlannerProviderFactory(),
+        dashboard_service,
+        SQLAlchemyUnitOfWork(session),
+    )
 
 
 def test_ai_providers_require_auth(client: TestClient) -> None:
@@ -135,9 +155,6 @@ def test_planner_generates_structured_draft_with_provider_boundary(
     client: TestClient,
     auth_headers: dict[str, str],
 ) -> None:
-    def get_fake_planner_service(session: Session = Depends(get_db_session)) -> AIPlannerService:
-        return AIPlannerService(SQLAlchemyAIRepository(session), FakePlannerProviderFactory())
-
     client.app.dependency_overrides[get_ai_planner_service] = get_fake_planner_service
     try:
         create_response = client.post("/api/v1/ai/providers", json=provider_payload(), headers=auth_headers)
@@ -167,3 +184,58 @@ def test_planner_generates_structured_draft_with_provider_boundary(
     assert draft["learningItems"][0]["title"] == "FastAPI service boundaries"
     assert draft["todos"][0]["priority"] == "high"
     assert draft["notePrompts"][0]["category"] == "Learning"
+
+
+def test_planner_commit_writes_draft_to_workspace_modules(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    client.app.dependency_overrides[get_ai_planner_service] = get_fake_planner_service
+    try:
+        assert client.post("/api/v1/ai/providers", json=provider_payload(), headers=auth_headers).status_code == 201
+        generate_response = client.post(
+            "/api/v1/ai/planner/generate",
+            json={
+                "target": "Become an AI application developer",
+                "currentLevel": "Can build small Python apps",
+                "weeklyHours": 8,
+                "preferredStack": ["FastAPI", "PostgreSQL"],
+            },
+            headers=auth_headers,
+        )
+        assert generate_response.status_code == 200
+        draft_id = generate_response.json()["id"]
+
+        commit_response = client.post(
+            f"/api/v1/ai/planner/drafts/{draft_id}/commit",
+            headers=auth_headers,
+        )
+
+        second_commit_response = client.post(
+            f"/api/v1/ai/planner/drafts/{draft_id}/commit",
+            headers=auth_headers,
+        )
+    finally:
+        client.app.dependency_overrides.pop(get_ai_planner_service, None)
+
+    assert commit_response.status_code == 200
+    assert commit_response.json() == {
+        "draftId": draft_id,
+        "status": "committed",
+        "goalsCreated": 1,
+        "learningItemsCreated": 1,
+        "todosCreated": 1,
+        "notesCreated": 1,
+    }
+    assert second_commit_response.status_code == 400
+    assert second_commit_response.json()["detail"] == "AI plan draft is already committed"
+
+    goals = client.get("/api/v1/goals", headers=auth_headers).json()
+    learning_items = client.get("/api/v1/learning-items", headers=auth_headers).json()
+    todos = client.get("/api/v1/todos", headers=auth_headers).json()
+    notes = client.get("/api/v1/notes", headers=auth_headers).json()
+
+    assert goals[0]["title"] == "Ship an AI planner"
+    assert learning_items[0]["title"] == "FastAPI service boundaries"
+    assert todos[0]["title"] == "Draft planner schema"
+    assert notes[0]["title"] == "Daily learning reflection"

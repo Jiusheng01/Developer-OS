@@ -59,3 +59,12 @@ export type LearningPlanDraft = {
   status: string;
   createdAt: string;
 };
+
+export type PlannerCommitResult = {
+  draftId: string;
+  status: string;
+  goalsCreated: number;
+  learningItemsCreated: number;
+  todosCreated: number;
+  notesCreated: number;
+};

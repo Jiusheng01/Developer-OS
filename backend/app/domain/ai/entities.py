@@ -83,3 +83,13 @@ class LearningPlanDraft:
     raw_plan: dict[str, object]
     status: PlanDraftStatus
     created_at: datetime
+
+
+@dataclass(frozen=True)
+class PlannerCommitResult:
+    draft_id: str
+    status: PlanDraftStatus
+    goals_created: int
+    learning_items_created: int
+    todos_created: int
+    notes_created: int

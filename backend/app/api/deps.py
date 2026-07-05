@@ -12,6 +12,7 @@ from app.domain.ai.services import AIPlannerService, AIProviderService
 from app.domain.dashboard.services import DashboardService
 from app.infrastructure.ai.openai_compatible import OpenAICompatibleProviderFactory
 from app.infrastructure.database.session import get_db_session
+from app.infrastructure.database.unit_of_work import SQLAlchemyUnitOfWork
 from app.infrastructure.repositories.sqlalchemy_ai_repository import SQLAlchemyAIRepository
 from app.infrastructure.repositories.sqlalchemy_auth_repository import SQLAlchemyAuthRepository
 from app.infrastructure.repositories.sqlalchemy_dashboard_repository import SQLAlchemyDashboardRepository
@@ -43,8 +44,20 @@ def get_ai_provider_service(
 def get_ai_planner_service(
     session: Session = Depends(get_db_session),
 ) -> AIPlannerService:
-    repository = SQLAlchemyAIRepository(session)
-    return AIPlannerService(repository, OpenAICompatibleProviderFactory())
+    ai_repository = SQLAlchemyAIRepository(session, auto_commit=False)
+    dashboard_repository = SQLAlchemyDashboardRepository(session, auto_commit=False)
+    dashboard_service = DashboardService(
+        dashboard_repository,
+        dashboard_repository,
+        dashboard_repository,
+        dashboard_repository,
+    )
+    return AIPlannerService(
+        ai_repository,
+        OpenAICompatibleProviderFactory(),
+        dashboard_service,
+        SQLAlchemyUnitOfWork(session),
+    )
 
 
 def get_current_user(

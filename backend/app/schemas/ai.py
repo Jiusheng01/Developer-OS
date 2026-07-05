@@ -6,6 +6,7 @@ from pydantic import Field
 from app.domain.ai.entities import (
     AIProviderConfig,
     LearningPlanDraft,
+    PlannerCommitResult,
     PlanGoal,
     PlanLearningItem,
     PlanNotePrompt,
@@ -147,4 +148,24 @@ class LearningPlanDraftRead(APIModel):
             note_prompts=[PlanNotePromptRead.from_entity(prompt) for prompt in draft.note_prompts],
             status=draft.status,
             created_at=draft.created_at,
+        )
+
+
+class PlannerCommitResultRead(APIModel):
+    draft_id: str = Field(alias="draftId")
+    status: str
+    goals_created: int = Field(alias="goalsCreated")
+    learning_items_created: int = Field(alias="learningItemsCreated")
+    todos_created: int = Field(alias="todosCreated")
+    notes_created: int = Field(alias="notesCreated")
+
+    @classmethod
+    def from_entity(cls, result: PlannerCommitResult) -> "PlannerCommitResultRead":
+        return cls(
+            draft_id=result.draft_id,
+            status=result.status,
+            goals_created=result.goals_created,
+            learning_items_created=result.learning_items_created,
+            todos_created=result.todos_created,
+            notes_created=result.notes_created,
         )

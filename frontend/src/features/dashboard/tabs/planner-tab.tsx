@@ -6,12 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { generateLearningPlan } from "@/features/ai/data/ai-api";
+import { commitLearningPlanDraft, generateLearningPlan } from "@/features/ai/data/ai-api";
 import type { LearningPlanDraft } from "@/features/ai/data/types";
 import { DashboardEmptyState } from "@/features/dashboard/components/dashboard-empty-state";
 import { DashboardPanelMotion } from "@/features/dashboard/components/dashboard-motion";
 import { DashboardSection } from "@/features/dashboard/components/dashboard-section";
 import { DashboardStatusStrip } from "@/features/dashboard/components/dashboard-status-strip";
+import type { DashboardStore } from "@/features/dashboard/hooks/use-dashboard-store";
 import { copy } from "@/lib/i18n/copy";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
@@ -32,7 +33,7 @@ function errorMessage(error: unknown) {
   return "Planner request failed";
 }
 
-export function PlannerTab() {
+export function PlannerTab({ store }: { store: DashboardStore }) {
   const { locale } = useLocale();
   const t = copy[locale].dashboard.planner;
   const [target, setTarget] = useState("");
@@ -43,7 +44,9 @@ export function PlannerTab() {
   const [constraints, setConstraints] = useState("");
   const [draft, setDraft] = useState<LearningPlanDraft | undefined>();
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -53,6 +56,7 @@ export function PlannerTab() {
     }
     setLoading(true);
     setError("");
+    setMessage("");
     try {
       const nextDraft = await generateLearningPlan({
         target: target.trim(),
@@ -67,6 +71,29 @@ export function PlannerTab() {
       setError(errorMessage(requestError));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCommitDraft() {
+    if (!draft) return;
+    setImporting(true);
+    setError("");
+    setMessage("");
+    try {
+      const result = await commitLearningPlanDraft(draft.id);
+      await store.reloadData();
+      setDraft((current) => (current ? { ...current, status: result.status } : current));
+      setMessage(
+        t.importSuccess
+          .replace("{goals}", String(result.goalsCreated))
+          .replace("{learning}", String(result.learningItemsCreated))
+          .replace("{todos}", String(result.todosCreated))
+          .replace("{notes}", String(result.notesCreated)),
+      );
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -97,6 +124,7 @@ export function PlannerTab() {
       </DashboardPanelMotion>
 
       {error ? <DashboardStatusStrip title={t.errorTitle} detail={error} variant="warning" /> : null}
+      {message ? <DashboardStatusStrip title={message} variant="info" /> : null}
 
       <DashboardSection title={t.draftTitle} description={t.draftDescription} icon={Route} contentClassName="grid gap-4">
         {!draft ? <DashboardEmptyState title={t.emptyDraft} description={t.emptyDraftDescription} icon={BrainCircuit} /> : null}
@@ -109,6 +137,13 @@ export function PlannerTab() {
                   <p className="mt-2 text-sm text-muted-foreground">{draft.summary}</p>
                 </div>
                 <Badge>{draft.status}</Badge>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button type="button" onClick={() => void handleCommitDraft()} disabled={importing || draft.status === "committed"}>
+                  <ListChecks className="h-4 w-4" />
+                  {importing ? t.importing : t.importToWorkspace}
+                </Button>
+                <p className="self-center text-xs text-muted-foreground">{t.importHint}</p>
               </div>
             </div>
             <div className="grid gap-4 lg:grid-cols-2">

@@ -18,8 +18,16 @@ from app.infrastructure.database.models import AIPlanDraftModel, AIProviderModel
 
 
 class SQLAlchemyAIRepository:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, auto_commit: bool = True) -> None:
         self._session = session
+        self._auto_commit = auto_commit
+
+    def _save(self, model: object) -> None:
+        if self._auto_commit:
+            self._session.commit()
+        else:
+            self._session.flush()
+        self._session.refresh(model)
 
     def list_provider_configs(self, user_id: str) -> Sequence[AIProviderConfig]:
         models = self._session.scalars(
@@ -62,8 +70,7 @@ class SQLAlchemyAIRepository:
             updated_at=config.updated_at,
         )
         self._session.add(model)
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
         return self._provider_from_model(model)
 
     def update_provider_config(
@@ -79,8 +86,7 @@ class SQLAlchemyAIRepository:
             return None
         for key, value in changes.items():
             setattr(model, key, value)
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
         return self._provider_from_model(model)
 
     def delete_provider_config(self, user_id: str, provider_id: str) -> bool:
@@ -91,7 +97,10 @@ class SQLAlchemyAIRepository:
             return False
         was_default = model.is_default
         self._session.delete(model)
-        self._session.commit()
+        if self._auto_commit:
+            self._session.commit()
+        else:
+            self._session.flush()
         if was_default:
             self._promote_first_provider(user_id)
         return True
@@ -105,8 +114,7 @@ class SQLAlchemyAIRepository:
         self._clear_default(user_id)
         model.is_default = True
         model.enabled = True
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
         return self._provider_from_model(model)
 
     def create_plan_draft(self, draft: LearningPlanDraft) -> LearningPlanDraft:
@@ -120,8 +128,28 @@ class SQLAlchemyAIRepository:
             created_at=draft.created_at,
         )
         self._session.add(model)
-        self._session.commit()
-        self._session.refresh(model)
+        self._save(model)
+        return self._draft_from_model(model)
+
+    def get_plan_draft(self, user_id: str, draft_id: str) -> LearningPlanDraft | None:
+        model = self._session.scalar(
+            select(AIPlanDraftModel).where(AIPlanDraftModel.user_id == user_id, AIPlanDraftModel.id == draft_id)
+        )
+        return self._draft_from_model(model) if model is not None else None
+
+    def update_plan_draft_status(
+        self,
+        user_id: str,
+        draft_id: str,
+        status: str,
+    ) -> LearningPlanDraft | None:
+        model = self._session.scalar(
+            select(AIPlanDraftModel).where(AIPlanDraftModel.user_id == user_id, AIPlanDraftModel.id == draft_id)
+        )
+        if model is None:
+            return None
+        model.status = status
+        self._save(model)
         return self._draft_from_model(model)
 
     def _clear_default(self, user_id: str) -> None:
@@ -138,7 +166,10 @@ class SQLAlchemyAIRepository:
         if model is None:
             return
         model.is_default = True
-        self._session.commit()
+        if self._auto_commit:
+            self._session.commit()
+        else:
+            self._session.flush()
 
     @staticmethod
     def _provider_from_model(model: AIProviderModel) -> AIProviderConfig:

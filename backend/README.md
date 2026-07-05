@@ -17,6 +17,7 @@ V4 starts the AI Learning Workspace direction with:
 
 - AI Providers for OpenAI-compatible model configuration
 - AI Planner for structured learning-plan draft generation
+- Planner commit for writing drafts into workspace modules through domain services
 - Backend-owned LLM Provider boundary
 
 The frontend never calls model APIs directly. API keys stay in backend persistence and are not returned by read endpoints.
@@ -173,7 +174,16 @@ Authorization: Bearer <accessToken>
 }
 ```
 
-The Planner returns a structured draft. It does not directly write into Todo, Learning, Notes, or Goals in this slice.
+The Planner first returns a structured draft. The commit endpoint writes that draft into workspace modules through backend domain services.
+
+Commit Planner draft:
+
+```text
+POST /api/v1/ai/planner/drafts/{draftId}/commit
+Authorization: Bearer <accessToken>
+```
+
+Commit creates records through the existing Goals, Learning, Todo, and Notes services. The LLM provider never writes to the database directly.
 
 The default SQLite database path is:
 
