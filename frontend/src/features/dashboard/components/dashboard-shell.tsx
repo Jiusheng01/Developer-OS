@@ -12,23 +12,16 @@ import { NotesTab } from "@/features/dashboard/tabs/notes-tab";
 import { SettingsTab } from "@/features/dashboard/tabs/settings-tab";
 import { TodayTab } from "@/features/dashboard/tabs/today-tab";
 import { TodoTab } from "@/features/dashboard/tabs/todo-tab";
-import { getDashboardDataProviderMode } from "@/features/dashboard/data/provider-config";
 import { useDashboardStore } from "@/features/dashboard/hooks/use-dashboard-store";
 import { copy } from "@/lib/i18n/copy";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
 export function DashboardShell() {
-  const providerMode = getDashboardDataProviderMode();
-
-  if (providerMode === "api") {
-    return (
-      <AuthGate>
-        <AuthenticatedDashboardShell />
-      </AuthGate>
-    );
-  }
-
-  return <DashboardWorkspace />;
+  return (
+    <AuthGate>
+      <AuthenticatedDashboardShell />
+    </AuthGate>
+  );
 }
 
 function AuthenticatedDashboardShell() {

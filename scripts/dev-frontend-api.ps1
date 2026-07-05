@@ -21,10 +21,10 @@ try {
     exit 1
 }
 
-$env:NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER = "api"
 $env:NEXT_PUBLIC_API_BASE_URL = $ApiBaseUrl
 
-Write-Host "Starting Developer OS frontend in API mode on http://${HostName}:$Port"
+Write-Host "Starting Developer OS frontend on http://${HostName}:$Port"
+Write-Host "Dashboard mode: API-backed workspace"
 Write-Host "API base URL: $env:NEXT_PUBLIC_API_BASE_URL"
 Write-Host "Restart this script after changing NEXT_PUBLIC_* values."
 

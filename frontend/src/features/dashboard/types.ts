@@ -89,15 +89,3 @@ export type DashboardState = {
   notes: NoteItem[];
   goals: GoalItem[];
 };
-
-export type DashboardExport = {
-  exportedAt: string;
-  source: "developer-os";
-  state: DashboardState;
-};
-
-export type DashboardImportError = "empty" | "invalid-json" | "invalid-source" | "invalid-shape";
-
-export type DashboardImportResult =
-  | { ok: true; state: DashboardState }
-  | { ok: false; error: DashboardImportError };

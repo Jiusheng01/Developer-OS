@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { stateWithSnapshot } from "@/features/dashboard/data/dashboard-data-provider";
+import { createDefaultDashboardState } from "@/features/dashboard/data/dashboard-defaults";
 import {
-  loadDashboardState,
-  resetDashboardState,
-  saveDashboardState,
-} from "@/features/dashboard/data/local-storage-dashboard-repository";
+  type DashboardDataSnapshot,
+  stateWithSnapshot,
+} from "@/features/dashboard/data/dashboard-data-provider";
+import {
+  loadDashboardPreferences,
+  saveDashboardPreferences,
+} from "@/features/dashboard/data/dashboard-preferences-repository";
 import {
   getDashboardDataProvider,
   getDashboardDataProviderMode,
@@ -59,17 +62,34 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Dashboard data provider failed";
 }
 
+const EMPTY_DASHBOARD_SNAPSHOT = {
+  todos: [],
+  learningItems: [],
+  notes: [],
+  goals: [],
+} satisfies DashboardDataSnapshot;
+
+function createInitialDashboardState(): DashboardState {
+  return stateWithSnapshot(
+    {
+      ...createDefaultDashboardState(),
+      preferences: loadDashboardPreferences(),
+    },
+    EMPTY_DASHBOARD_SNAPSHOT,
+  );
+}
+
 export function useDashboardStore() {
   const browserHydrated = useSyncExternalStore(() => () => undefined, () => true, () => false);
   const provider = useMemo(() => getDashboardDataProvider(), []);
   const providerMode = useMemo(() => getDashboardDataProviderMode(), []);
-  const [state, setState] = useState<DashboardState>(() => loadDashboardState());
+  const [state, setState] = useState<DashboardState>(() => createInitialDashboardState());
   const [dataHydrated, setDataHydrated] = useState(false);
   const [dataError, setDataError] = useState<string | undefined>();
 
-  const persistLocalState = useCallback((next: DashboardState) => {
-    saveDashboardState(next);
-    applyTheme(next.preferences.theme);
+  const persistPreferences = useCallback((preferences: DashboardState["preferences"]) => {
+    saveDashboardPreferences(preferences);
+    applyTheme(preferences.theme);
   }, []);
 
   useEffect(() => {
@@ -88,7 +108,6 @@ export function useDashboardStore() {
         if (cancelled) return;
         setState((current) => {
           const next = stateWithSnapshot(current, snapshot);
-          persistLocalState(next);
           return next;
         });
       } catch (error) {
@@ -102,23 +121,21 @@ export function useDashboardStore() {
     return () => {
       cancelled = true;
     };
-  }, [browserHydrated, persistLocalState, provider]);
+  }, [browserHydrated, provider]);
 
   const commitLocal = useCallback((update: (current: DashboardState) => DashboardState) => {
     setState((current) => {
       const next = update(current);
-      persistLocalState(next);
+      persistPreferences(next.preferences);
       return next;
     });
-  }, [persistLocalState]);
+  }, [persistPreferences]);
 
   const commitBusiness = useCallback((update: (current: DashboardState) => DashboardState) => {
     setState((current) => {
-      const next = update(current);
-      persistLocalState(next);
-      return next;
+      return update(current);
     });
-  }, [persistLocalState]);
+  }, []);
 
   const runProviderAction = useCallback(async (action: () => Promise<void>) => {
     setDataError(undefined);
@@ -375,25 +392,17 @@ export function useDashboardStore() {
   const clearData = useCallback(() => {
     void runProviderAction(async () => {
       const snapshot = await provider.resetData();
-      const reset = stateWithSnapshot(resetDashboardState(), snapshot);
-      setState(reset);
-      applyTheme(reset.preferences.theme);
+      setState((current) =>
+        stateWithSnapshot(
+          {
+            ...createDefaultDashboardState(),
+            preferences: current.preferences,
+          },
+          snapshot,
+        ),
+      );
     });
   }, [provider, runProviderAction]);
-
-  const exportDashboardData = useCallback(async () => provider.exportData(state), [provider, state]);
-
-  const importDashboardData = useCallback(async (raw: string) => {
-    const result = await provider.importData(raw);
-    if (!result.ok) return result;
-
-    const nextState: DashboardState = result.state;
-
-    saveDashboardState(nextState);
-    setState(nextState);
-    applyTheme(nextState.preferences.theme);
-    return { ok: true, state: nextState } as const;
-  }, [provider]);
 
   const summary = useMemo(() => {
     const openTodos = state.todos.filter((todo) => !todo.done).length;
@@ -433,8 +442,6 @@ export function useDashboardStore() {
     toggleGoalTask,
     deleteGoalTask,
     clearData,
-    exportDashboardData,
-    importDashboardData,
   };
 }
 

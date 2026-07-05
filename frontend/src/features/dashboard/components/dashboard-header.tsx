@@ -62,7 +62,7 @@ export function DashboardHeader({
           <ThemeIcon className="h-4 w-4" />
           <span className="hidden sm:inline">{nextTheme === "dark" ? t.dark : t.light}</span>
         </Button>
-        {providerMode === "api" && onSignOut ? (
+        {onSignOut ? (
           <Button type="button" variant="ghost" size="sm" onClick={onSignOut} aria-label={t.auth.signOut}>
             <LogOut className="h-4 w-4" />
             <span className="hidden sm:inline">{t.auth.signOut}</span>

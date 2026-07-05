@@ -7,15 +7,9 @@ import {
 import {
   type DashboardDataProvider,
   type DashboardDataSnapshot,
-  stateWithSnapshot,
 } from "@/features/dashboard/data/dashboard-data-provider";
 import { apiRequest } from "@/lib/api/http-client";
-import {
-  parseDashboardImport,
-  serializeDashboardExport,
-} from "@/features/dashboard/data/local-storage-dashboard-repository";
 import type {
-  DashboardState,
   GoalInput,
   GoalItem,
   GoalPatch,
@@ -114,69 +108,6 @@ async function resetRemoteData() {
   return { todos: [], learningItems: [], notes: [], goals: [] } satisfies DashboardDataSnapshot;
 }
 
-async function importSnapshot(state: DashboardState): Promise<DashboardDataSnapshot> {
-  await resetRemoteData();
-
-  const todos = [];
-  for (const todo of state.todos) {
-    const created = await apiDashboardProvider.todos.create({
-      title: todo.title,
-      priority: todo.priority,
-      tags: todo.tags,
-      dueDate: todo.dueDate,
-    });
-    todos.push(todo.done ? await apiDashboardProvider.todos.update(created.id, { done: true }) : created);
-  }
-
-  const learningItems = [];
-  for (const item of state.learningItems) {
-    learningItems.push(
-      await apiDashboardProvider.learning.create({
-        title: item.title,
-        area: item.area,
-        status: item.status,
-        progress: item.progress,
-        notes: item.notes,
-        tags: item.tags,
-      }),
-    );
-  }
-
-  const notes = [];
-  for (const note of state.notes) {
-    notes.push(
-      await apiDashboardProvider.notes.create({
-        title: note.title,
-        body: note.body,
-        category: note.category,
-        tags: note.tags,
-      }),
-    );
-  }
-
-  const goals = [];
-  for (const goal of state.goals) {
-    const createdGoal = await apiDashboardProvider.goals.create({
-      title: goal.title,
-      progress: goal.progress,
-      status: goal.status,
-      targetYear: goal.targetYear,
-    });
-    const tasks = [];
-    for (const task of goal.tasks) {
-      const createdTask = await apiDashboardProvider.goals.createTask(createdGoal.id, task.title);
-      tasks.push(
-        task.done
-          ? await apiDashboardProvider.goals.updateTask(createdGoal.id, createdTask.id, { done: true })
-          : createdTask,
-      );
-    }
-    goals.push({ ...createdGoal, tasks });
-  }
-
-  return { todos, learningItems, notes, goals };
-}
-
 export const apiDashboardProvider: DashboardDataProvider = {
   async loadData(): Promise<DashboardDataSnapshot> {
     const [todos, learningItems, notes, goals] = await Promise.all([
@@ -190,17 +121,6 @@ export const apiDashboardProvider: DashboardDataProvider = {
 
   async resetData() {
     return resetRemoteData();
-  },
-
-  async exportData(state: DashboardState) {
-    return serializeDashboardExport(state);
-  },
-
-  async importData(raw: string) {
-    const result = parseDashboardImport(raw);
-    if (!result.ok) return result;
-    const snapshot = await importSnapshot(result.state);
-    return { ok: true, state: stateWithSnapshot(result.state, snapshot) } as const;
   },
 
   todos: {

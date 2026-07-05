@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { readLocalStorage } from "@/lib/storage/safe-local-storage";
-
-const DASHBOARD_STORAGE_KEY = "developer-os-dashboard-state";
+import {
+  DASHBOARD_PREFERENCES_STORAGE_KEY,
+  loadDashboardPreferences,
+} from "@/features/dashboard/data/dashboard-preferences-repository";
 
 type ThemePreference = "light" | "dark" | "system";
 
@@ -12,15 +13,7 @@ function readThemePreference(): ThemePreference {
     return "dark";
   }
 
-  try {
-    const raw = readLocalStorage(DASHBOARD_STORAGE_KEY);
-    if (!raw) return "dark";
-    const parsed = JSON.parse(raw) as { preferences?: { theme?: unknown } };
-    const theme = parsed.preferences?.theme;
-    return theme === "light" || theme === "dark" || theme === "system" ? theme : "dark";
-  } catch {
-    return "dark";
-  }
+  return loadDashboardPreferences().theme;
 }
 
 function applyTheme(theme: ThemePreference) {
@@ -34,7 +27,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     applyTheme(readThemePreference());
 
     function handleStorage(event: StorageEvent) {
-      if (event.key === DASHBOARD_STORAGE_KEY) {
+      if (event.key === DASHBOARD_PREFERENCES_STORAGE_KEY) {
         applyTheme(readThemePreference());
       }
     }

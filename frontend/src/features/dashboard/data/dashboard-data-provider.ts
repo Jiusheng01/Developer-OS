@@ -1,5 +1,4 @@
 import type {
-  DashboardImportResult,
   DashboardState,
   GoalInput,
   GoalItem,
@@ -50,8 +49,6 @@ export type GoalsDataPort = {
 export type DashboardDataProvider = {
   loadData(): Promise<DashboardDataSnapshot>;
   resetData(): Promise<DashboardDataSnapshot>;
-  exportData(state: DashboardState): Promise<string>;
-  importData(raw: string): Promise<DashboardImportResult>;
   todos: TodoDataPort;
   learning: LearningDataPort;
   notes: NotesDataPort;

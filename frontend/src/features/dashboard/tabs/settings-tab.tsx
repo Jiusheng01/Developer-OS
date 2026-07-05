@@ -1,16 +1,14 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { ClipboardCopy, Database, Download, Languages, Palette, Trash2, Upload } from "lucide-react";
+import { useState } from "react";
+import { Database, Languages, Palette, Trash2 } from "lucide-react";
 import { LanguageToggle } from "@/components/shared/language-toggle";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { DashboardPanelMotion } from "@/features/dashboard/components/dashboard-motion";
 import { DashboardProviderBadge } from "@/features/dashboard/components/dashboard-provider-badge";
 import { DashboardSection } from "@/features/dashboard/components/dashboard-section";
 import { DashboardStatusStrip } from "@/features/dashboard/components/dashboard-status-strip";
 import type { DashboardStore } from "@/features/dashboard/hooks/use-dashboard-store";
-import type { DashboardImportError } from "@/features/dashboard/types";
 import { copy } from "@/lib/i18n/copy";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import type { ThemePreference } from "@/lib/theme/theme-provider";
@@ -21,56 +19,8 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
   const { locale } = useLocale();
   const dashboardCopy = copy[locale].dashboard;
   const t = dashboardCopy.settings;
-  const [exportText, setExportText] = useState("");
-  const [importText, setImportText] = useState("");
   const [dataMessage, setDataMessage] = useState("");
   const [resetArmed, setResetArmed] = useState(false);
-
-  const importErrorMessages: Record<DashboardImportError, string> = {
-    empty: t.importEmpty,
-    "invalid-json": t.importInvalidJson,
-    "invalid-source": t.importInvalidSource,
-    "invalid-shape": t.importInvalidShape,
-  };
-
-  async function handleGenerateExport() {
-    setResetArmed(false);
-    setExportText(await store.exportDashboardData());
-    setDataMessage(t.exportReady);
-  }
-
-  async function handleCopyExport() {
-    setResetArmed(false);
-    const text = exportText || (await store.exportDashboardData());
-    setExportText(text);
-
-    if (!("clipboard" in navigator)) {
-      setDataMessage(t.copyUnavailable);
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(text);
-      setDataMessage(t.copySuccess);
-    } catch {
-      setDataMessage(t.copyUnavailable);
-    }
-  }
-
-  async function handleImport(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setResetArmed(false);
-    const result = await store.importDashboardData(importText);
-
-    if (!result.ok) {
-      setDataMessage(importErrorMessages[result.error]);
-      return;
-    }
-
-    setImportText("");
-    setExportText("");
-    setDataMessage(t.importSuccess);
-  }
 
   function handleArmReset() {
     setResetArmed(true);
@@ -85,8 +35,6 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
   function handleConfirmReset() {
     store.clearData();
     setResetArmed(false);
-    setExportText("");
-    setImportText("");
     setDataMessage(t.resetSubmitted);
   }
 
@@ -145,48 +93,6 @@ export function SettingsTab({ store }: { store: DashboardStore }) {
               </div>
               {resetArmed ? <DashboardStatusStrip title={t.resetPending} variant="warning" /> : null}
             </div>
-          </DashboardSection>
-        </DashboardPanelMotion>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <DashboardPanelMotion>
-          <DashboardSection title={t.exportData} description={t.exportDescription} icon={Download} contentClassName="grid gap-3">
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => void handleGenerateExport()}>
-                <Download className="h-4 w-4" />
-                {t.generateExport}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => void handleCopyExport()}>
-                <ClipboardCopy className="h-4 w-4" />
-                {t.copyExport}
-              </Button>
-            </div>
-            <Textarea
-              value={exportText}
-              readOnly
-              placeholder={t.exportPlaceholder}
-              className="min-h-44 font-mono text-xs"
-              aria-label={t.exportData}
-            />
-          </DashboardSection>
-        </DashboardPanelMotion>
-
-        <DashboardPanelMotion>
-          <DashboardSection title={t.importData} description={t.importDescription} icon={Upload}>
-            <form className="grid gap-3" onSubmit={handleImport}>
-              <Textarea
-                value={importText}
-                onChange={(event) => setImportText(event.target.value)}
-                placeholder={t.importPlaceholder}
-                className="min-h-44 font-mono text-xs"
-                aria-label={t.importData}
-              />
-              <Button type="submit">
-                <Upload className="h-4 w-4" />
-                {t.importAction}
-              </Button>
-            </form>
           </DashboardSection>
         </DashboardPanelMotion>
       </div>

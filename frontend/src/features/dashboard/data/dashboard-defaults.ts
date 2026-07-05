@@ -68,11 +68,11 @@ export function createDefaultDashboardState(): DashboardState {
     ],
     notes: [
       {
-        id: "note-v1-scope",
-        title: "V1 scope",
-        body: "Keep v1 local-first: public data files, dashboard LocalStorage, no backend yet.",
+        id: "note-v3-scope",
+        title: "V3 scope",
+        body: "Keep public pages static-data driven while Dashboard business data is account-backed through FastAPI.",
         category: "Architecture",
-        tags: ["v1", "local-first"],
+        tags: ["v3", "api"],
         updatedAt: now,
       },
     ],

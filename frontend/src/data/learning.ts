@@ -51,18 +51,18 @@ export const learningTracks: LearningTrack[] = [
     id: "backend-systems",
     title: { en: "Backend Systems", zh: "后端系统" },
     status: "next",
-    progress: 18,
+    progress: 45,
     description: {
-      en: "Prepare the app for FastAPI, PostgreSQL, JWT, and synchronized private data.",
-      zh: "为 FastAPI、PostgreSQL、JWT 和私有数据同步做准备。",
+      en: "Build the account-backed API foundation for synchronized private workspace data.",
+      zh: "构建账号化 API 基础，为私人工作台数据同步做准备。",
     },
     modules: {
       en: ["FastAPI API design", "PostgreSQL modeling", "Auth boundaries"],
       zh: ["FastAPI API 设计", "PostgreSQL 建模", "认证边界"],
     },
     milestone: {
-      en: "Replace LocalStorage repository with an API repository in v2.",
-      zh: "在 v2 中用 API repository 替换 LocalStorage repository。",
+      en: "Stabilize JWT auth, user-scoped CRUD, and the API-only Dashboard workflow.",
+      zh: "稳定 JWT 认证、用户隔离 CRUD 和 API-only Dashboard 工作流。",
     },
   },
 ];

@@ -12,7 +12,8 @@ Personal Developer OS: a public developer site plus a private daily workspace.
 frontend/ Next.js App Router
   -> Dashboard Store
   -> Dashboard Data Provider
-  -> LocalStorage provider or API provider
+  -> Backend API provider
+  -> Browser UI preference storage
 
 backend/ FastAPI
   -> API endpoints
@@ -29,9 +30,9 @@ V3.0 keeps the public site static-data driven and adds migration-backed database
 - Notes
 - Goals and goal tasks
 
-The backend still defaults to SQLite and now uses Alembic as the schema source of truth. Set `DEVELOPER_OS_DATABASE_URL` to switch to a local PostgreSQL database. V3 does not introduce Docker. V3.1 adds JWT auth and public registration; V3.2 scopes Dashboard business APIs to the current user; V3.3 adds the frontend login/register experience.
+The backend still defaults to SQLite and now uses Alembic as the schema source of truth. Set `DEVELOPER_OS_DATABASE_URL` to switch to a local PostgreSQL database. V3 does not introduce Docker. V3.1 adds JWT auth and public registration; V3.2 scopes Dashboard business APIs to the current user; V3.3 adds the frontend login/register experience; V3.4 removes the Dashboard LocalStorage business-data mode.
 
-In API mode, the frontend shows login/register before the Dashboard and automatically attaches the bearer token to business API requests. Local mode no longer uses a passcode gate and opens `/dashboard` directly. Theme, locale, and active tab remain browser-local.
+The Dashboard now always uses the backend API. The frontend shows login/register before the Dashboard and automatically attaches the bearer token to business API requests. Theme, locale, and active tab remain browser-local; Todo, Learning, Notes, and Goals are stored only in the backend account data.
 
 ## Frontend
 
@@ -40,14 +41,11 @@ npm install --prefix frontend
 npm run dev --prefix frontend
 ```
 
-Default mode is LocalStorage. To use the FastAPI backend, create `frontend/.env.local`:
+The frontend expects the FastAPI backend. Create `frontend/.env.local`:
 
 ```text
-NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=api
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
 ```
-
-Use `NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=local` or remove the variable to return to LocalStorage mode.
 
 ## Backend
 
@@ -91,7 +89,7 @@ Public registration is enabled by default and can be disabled with `DEVELOPER_OS
 
 ## Recommended Development Scripts
 
-Run these commands from the repository root. They are Windows PowerShell scripts and do not write `frontend/.env.local`; provider mode is set only for the dev server process they start.
+Run these commands from the repository root. They are Windows PowerShell scripts and do not write `frontend/.env.local`.
 
 Start the FastAPI backend:
 
@@ -99,13 +97,7 @@ Start the FastAPI backend:
 .\scripts\dev-backend.ps1
 ```
 
-Start the frontend in localStorage mode:
-
-```powershell
-.\scripts\dev-frontend-local.ps1
-```
-
-Start the frontend in API mode:
+Start the frontend:
 
 ```powershell
 .\scripts\dev-frontend-api.ps1
@@ -149,35 +141,13 @@ If your shell blocks local scripts, run them with:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev-backend.ps1
 ```
 
-When switching between local and API provider mode, stop and restart the frontend dev script. Next.js reads `NEXT_PUBLIC_*` variables when the dev server starts.
+After changing `NEXT_PUBLIC_API_BASE_URL`, stop and restart the frontend dev script. Next.js reads `NEXT_PUBLIC_*` variables when the dev server starts.
 
 If a frontend script reports that another Next.js dev server may already be running, stop the existing frontend server before switching modes. If no Node dev server is running, remove the stale `frontend\.next\dev\lock` file and start the script again.
 
-## V3.0 Local/API Smoke Runbook
+## V3 API Workspace Smoke Runbook
 
 Use this checklist when changing Dashboard data access or validating a fresh setup.
-
-### LocalStorage mode
-
-1. Ensure `frontend/.env.local` is missing or contains:
-
-   ```text
-   NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=local
-   NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
-   ```
-
-2. Start the frontend:
-
-   ```powershell
-   .\scripts\dev-frontend-local.ps1
-   ```
-
-3. Open `http://127.0.0.1:3000/dashboard`.
-4. Create and edit one Todo, Learning item, Note, Goal, and Goal Task.
-5. Delete one Todo, Learning item, Note, Goal, and Goal Task.
-6. Refresh the browser and verify the remaining records are still available from browser storage.
-
-### API mode
 
 1. Start the backend from the repository root:
 
@@ -212,21 +182,16 @@ Use this checklist when changing Dashboard data access or validating a fresh set
 ### Settings data checks
 
 1. Open Settings.
-2. Confirm the provider badge matches the mode you started: Local or API.
-3. Generate an export JSON and copy it somewhere safe.
-4. Paste invalid JSON and verify the current workspace is not overwritten.
-5. Paste the generated export JSON and import it.
-6. Use Reset dashboard data only after the export check:
-   - Local mode resets this browser workspace.
-   - API mode resets provider-backed business data and returns this browser to first-run setup.
+2. Confirm the provider badge says API.
+3. Change theme and language, then refresh and verify UI preferences remain.
+4. Use Reset workspace data and verify Todo, Learning, Notes, and Goals are reset through the backend.
 
 ### API failure mode
 
-1. Keep the frontend configured with `NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=api`.
-2. Stop the backend.
-3. Open `/dashboard`.
-4. When signed out, verify the login screen shows an API connection error instead of a blank screen.
-5. With an existing valid session, verify the Dashboard can still open and shows a non-blocking data error.
+1. Stop the backend.
+2. Open `/dashboard`.
+3. When signed out, verify the login screen shows an API connection error instead of a blank screen.
+4. With an existing valid session, verify the Dashboard shows a non-blocking data error.
 
 ### SQLite reset
 

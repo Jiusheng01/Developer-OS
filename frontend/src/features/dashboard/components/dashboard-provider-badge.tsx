@@ -1,4 +1,4 @@
-import { Cloud, HardDrive } from "lucide-react";
+import { Cloud } from "lucide-react";
 import type { DashboardDataProviderMode } from "@/features/dashboard/data/provider-config";
 import { cn } from "@/lib/utils";
 
@@ -9,8 +9,6 @@ type DashboardProviderBadgeProps = {
 };
 
 export function DashboardProviderBadge({ mode, labels, className }: DashboardProviderBadgeProps) {
-  const Icon = mode === "api" ? Cloud : HardDrive;
-
   return (
     <span
       className={cn(
@@ -18,7 +16,7 @@ export function DashboardProviderBadge({ mode, labels, className }: DashboardPro
         className,
       )}
     >
-      <Icon className="h-3.5 w-3.5 text-primary" />
+      <Cloud className="h-3.5 w-3.5 text-primary" />
       {labels[mode]}
     </span>
   );

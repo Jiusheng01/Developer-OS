@@ -11,7 +11,7 @@ V3 persists Dashboard business data with FastAPI, SQLAlchemy, SQLite by default,
 - Notes
 - Goals and goal tasks
 
-Local mode opens the Dashboard directly; theme, language, and active tab remain browser-local. PostgreSQL is supported through `DEVELOPER_OS_DATABASE_URL`. Docker is intentionally out of scope for V3. Frontend API mode now uses the V3.3 login/register gate.
+The Dashboard uses the backend API for business data; theme, language, and active tab remain browser-local. PostgreSQL is supported through `DEVELOPER_OS_DATABASE_URL`. Docker is intentionally out of scope for V3. Frontend Dashboard access uses the login/register gate.
 
 ## Setup
 
@@ -151,18 +151,15 @@ To reset local API data while the backend is stopped:
 .\scripts\reset-api-sqlite.ps1
 ```
 
-## Frontend API Mode
+## Frontend
 
 Set these values in `frontend/.env.local`:
 
 ```text
-NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=api
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
 ```
 
-Use `NEXT_PUBLIC_DASHBOARD_DATA_PROVIDER=local` or omit the variable to keep the V1 LocalStorage mode.
-
-In API mode, `/dashboard` displays the frontend auth gate before loading Dashboard business data. Registration calls `POST /api/v1/auth/register` and then signs in with `POST /api/v1/auth/login`. After sign-in, Todo, Learning, Notes, Goals, and Goal Task requests automatically include:
+`/dashboard` displays the frontend auth gate before loading Dashboard business data. Registration calls `POST /api/v1/auth/register` and then signs in with `POST /api/v1/auth/login`. After sign-in, Todo, Learning, Notes, Goals, and Goal Task requests automatically include:
 
 ```text
 Authorization: Bearer <accessToken>

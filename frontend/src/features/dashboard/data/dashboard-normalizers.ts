@@ -1,7 +1,4 @@
-import { createDefaultDashboardState } from "@/features/dashboard/data/dashboard-defaults";
 import type {
-  DashboardState,
-  DashboardTab,
   GoalItem,
   GoalStatus,
   GoalTask,
@@ -11,7 +8,6 @@ import type {
   TodoItem,
   TodoPriority,
 } from "@/features/dashboard/types";
-import type { ThemePreference } from "@/lib/theme/theme-provider";
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -50,21 +46,6 @@ function asStringArray(value: unknown): string[] {
 
 function clampProgress(value: unknown, fallback: number) {
   return Math.min(100, Math.max(0, asNumber(value, fallback)));
-}
-
-function asTheme(value: unknown): ThemePreference {
-  return value === "light" || value === "dark" || value === "system" ? value : "dark";
-}
-
-function asTab(value: unknown): DashboardTab {
-  return value === "today" ||
-    value === "todo" ||
-    value === "learning" ||
-    value === "notes" ||
-    value === "goals" ||
-    value === "settings"
-    ? value
-    : "today";
 }
 
 function asTodoPriority(value: unknown): TodoPriority {
@@ -144,42 +125,4 @@ export function normalizeGoals(value: unknown, fallback: GoalItem[]): GoalItem[]
       tasks: normalizeGoalTasks(item.tasks, fallbackGoal?.tasks ?? []),
     };
   });
-}
-
-export function hasDashboardStateShape(value: unknown): value is Record<string, unknown> {
-  if (!isRecord(value)) return false;
-  return ["version", "access", "preferences", "todos", "learningItems", "notes", "goals"].some((key) => key in value);
-}
-
-export function normalizeDashboardState(value: unknown): DashboardState {
-  const fallback = createDefaultDashboardState();
-  if (!isRecord(value)) return fallback;
-
-  const preferences = isRecord(value.preferences) ? value.preferences : {};
-
-  return {
-    version: 2,
-    access: {
-      unlocked: false,
-    },
-    preferences: {
-      theme: asTheme(preferences.theme),
-      activeTab: asTab(preferences.activeTab),
-    },
-    todos: normalizeTodos(value.todos, fallback.todos),
-    learningItems: normalizeLearning(value.learningItems, fallback.learningItems),
-    notes: normalizeNotes(value.notes, fallback.notes),
-    goals: normalizeGoals(value.goals, fallback.goals),
-  };
-}
-
-export function sanitizeDashboardStateForPersistence(state: DashboardState): DashboardState {
-  const latest = normalizeDashboardState(state);
-  return {
-    ...latest,
-    access: {
-      ...latest.access,
-      unlocked: false,
-    },
-  };
 }

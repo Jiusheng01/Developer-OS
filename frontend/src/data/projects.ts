@@ -21,14 +21,14 @@ export const projects: Project[] = [
       en: "A personal website should also be useful as a daily engineering workspace.",
       zh: "个人网站不应该只展示自己，也应该成为每天可用的工程工作台。",
     },
-    stack: ["Next.js", "TypeScript", "Tailwind", "LocalStorage"],
+    stack: ["Next.js", "FastAPI", "SQLAlchemy", "JWT"],
     signal: {
       en: "Combines public growth signals with a private learning dashboard.",
       zh: "把公开成长信号和私有学习工作台合在一起。",
     },
     nextStep: {
-      en: "Ship the public shell, Dashboard workspace, Todo, and Learning modules.",
-      zh: "交付公开站点、Dashboard 工作台、Todo 和 Learning 模块。",
+      en: "Stabilize the account-backed Dashboard workflow and prepare the next product layer.",
+      zh: "稳定账号化 Dashboard 工作流，并准备下一层产品能力。",
     },
   },
   {
@@ -39,7 +39,7 @@ export const projects: Project[] = [
       en: "Study notes and goals are easy to lose when they are not tied to execution.",
       zh: "学习笔记和目标如果不连接到执行，很容易散落和遗忘。",
     },
-    stack: ["React state", "Local-first data", "Typed models"],
+    stack: ["React state", "REST API", "Typed models"],
     signal: {
       en: "Turns learning tracks into visible progress and private actions.",
       zh: "把学习路线转化为可见进度和私有行动。",
@@ -54,17 +54,17 @@ export const projects: Project[] = [
     name: { en: "FastAPI Data Layer", zh: "FastAPI 数据层" },
     status: "planning",
     problem: {
-      en: "LocalStorage is enough for v1, but long-term sync needs a backend boundary.",
-      zh: "v1 使用 LocalStorage 足够，但长期同步需要清晰的后端边界。",
+      en: "The workspace now needs a backend boundary that can later support sync, analytics, and AI features.",
+      zh: "工作台现在需要一个后端边界，后续才能支持同步、统计和 AI 功能。",
     },
     stack: ["FastAPI", "PostgreSQL", "JWT"],
     signal: {
-      en: "Planned as a repository replacement, not a page rewrite.",
-      zh: "未来作为 repository 替换，而不是重写页面。",
+      en: "Implemented through the provider boundary so pages stay independent from storage details.",
+      zh: "通过 Provider 边界实现，让页面不依赖具体存储细节。",
     },
     nextStep: {
-      en: "Keep v1 components independent from storage details.",
-      zh: "保持 v1 组件不依赖具体存储细节。",
+      en: "Prepare the data layer for PostgreSQL deployment and future AI-backed workflows.",
+      zh: "为 PostgreSQL 部署和未来 AI 工作流继续打磨数据层。",
     },
   },
 ];
