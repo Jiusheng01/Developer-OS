@@ -18,13 +18,9 @@ import { DashboardEmptyState } from "@/features/dashboard/components/dashboard-e
 import { DashboardPanelMotion } from "@/features/dashboard/components/dashboard-motion";
 import { DashboardSection } from "@/features/dashboard/components/dashboard-section";
 import { DashboardStatusStrip } from "@/features/dashboard/components/dashboard-status-strip";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { copy } from "@/lib/i18n/copy";
 import { useLocale } from "@/lib/i18n/locale-provider";
-
-function errorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  return "AI provider request failed";
-}
 
 export function ModelsTab() {
   const { locale } = useLocale();
@@ -36,6 +32,7 @@ export function ModelsTab() {
   const [model, setModel] = useState("gpt-4.1-mini");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [updatingProviderId, setUpdatingProviderId] = useState<string | undefined>();
   const [testingProviderId, setTestingProviderId] = useState<string | undefined>();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -47,7 +44,7 @@ export function ModelsTab() {
         if (!cancelled) setProviders(loadedProviders);
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setError(errorMessage(requestError));
+        if (!cancelled) setError(getApiErrorMessage(requestError, "AI provider request failed"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -79,7 +76,7 @@ export function ModelsTab() {
       setApiKey("");
       setMessage(t.saved);
     } catch (requestError) {
-      setError(errorMessage(requestError));
+      setError(getApiErrorMessage(requestError, "AI provider request failed"));
     } finally {
       setSaving(false);
     }
@@ -87,20 +84,47 @@ export function ModelsTab() {
 
   async function handleSetDefault(providerId: string) {
     setError("");
-    const provider = await setDefaultAIProvider(providerId);
-    setProviders((current) => current.map((item) => (item.id === provider.id ? provider : { ...item, isDefault: false })));
+    setMessage("");
+    setUpdatingProviderId(providerId);
+    try {
+      const provider = await setDefaultAIProvider(providerId);
+      setProviders((current) => current.map((item) => (item.id === provider.id ? provider : { ...item, isDefault: false })));
+      setMessage(t.defaultUpdated);
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "AI provider request failed"));
+    } finally {
+      setUpdatingProviderId(undefined);
+    }
   }
 
   async function handleToggle(provider: AIProviderConfig) {
     setError("");
-    const updated = await updateAIProvider(provider.id, { enabled: !provider.enabled });
-    setProviders((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    setMessage("");
+    setUpdatingProviderId(provider.id);
+    try {
+      const updated = await updateAIProvider(provider.id, { enabled: !provider.enabled });
+      setProviders((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      setMessage(t.updated);
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "AI provider request failed"));
+    } finally {
+      setUpdatingProviderId(undefined);
+    }
   }
 
   async function handleDelete(providerId: string) {
     setError("");
-    await deleteAIProvider(providerId);
-    setProviders((current) => current.filter((provider) => provider.id !== providerId));
+    setMessage("");
+    setUpdatingProviderId(providerId);
+    try {
+      await deleteAIProvider(providerId);
+      setProviders((current) => current.filter((provider) => provider.id !== providerId));
+      setMessage(t.deleted);
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "AI provider request failed"));
+    } finally {
+      setUpdatingProviderId(undefined);
+    }
   }
 
   async function handleTestProvider(providerId: string) {
@@ -111,7 +135,7 @@ export function ModelsTab() {
       const result = await testAIProvider(providerId);
       setMessage(result.message);
     } catch (requestError) {
-      setError(errorMessage(requestError));
+      setError(getApiErrorMessage(requestError, "AI provider request failed"));
     } finally {
       setTestingProviderId(undefined);
     }
@@ -155,19 +179,19 @@ export function ModelsTab() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" variant="outline" onClick={() => void handleSetDefault(provider.id)} disabled={provider.isDefault}>
+                <Button type="button" size="sm" variant="outline" onClick={() => void handleSetDefault(provider.id)} disabled={provider.isDefault || updatingProviderId === provider.id}>
                   <Star className="h-4 w-4" />
                   {t.setDefault}
                 </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => void handleTestProvider(provider.id)} disabled={testingProviderId === provider.id || !provider.enabled}>
+                <Button type="button" size="sm" variant="outline" onClick={() => void handleTestProvider(provider.id)} disabled={testingProviderId === provider.id || updatingProviderId === provider.id || !provider.enabled}>
                   <RadioTower className="h-4 w-4" />
                   {testingProviderId === provider.id ? t.testing : t.test}
                 </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => void handleToggle(provider)}>
+                <Button type="button" size="sm" variant="outline" onClick={() => void handleToggle(provider)} disabled={updatingProviderId === provider.id}>
                   {provider.enabled ? <Power className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
                   {provider.enabled ? t.disable : t.enable}
                 </Button>
-                <Button type="button" size="sm" variant="destructive" onClick={() => void handleDelete(provider.id)}>
+                <Button type="button" size="sm" variant="destructive" onClick={() => void handleDelete(provider.id)} disabled={updatingProviderId === provider.id}>
                   <Trash2 className="h-4 w-4" />
                   {t.delete}
                 </Button>

@@ -17,6 +17,7 @@ import type {
   AuthUser,
   RegistrationStatus,
 } from "@/features/auth/types";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { ApiClientError, setApiAuthTokenGetter, setApiUnauthorizedHandler } from "@/lib/api/http-client";
 
 type AuthContextValue = {
@@ -36,21 +37,8 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const SESSION_EXPIRED_ERROR = "auth/session-expired";
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function getApiDetailMessage(detail: unknown) {
-  if (typeof detail === "string") return detail;
-  if (isRecord(detail) && typeof detail.detail === "string") return detail.detail;
-  return undefined;
-}
-
 function getAuthErrorMessage(error: unknown) {
-  if (error instanceof ApiClientError) {
-    return getApiDetailMessage(error.detail) ?? `Request failed with status ${error.status}`;
-  }
-  return error instanceof Error ? error.message : "Authentication request failed";
+  return getApiErrorMessage(error, "Authentication request failed");
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

@@ -1,18 +1,19 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { BrainCircuit, CalendarDays, Clock, History, ListChecks, NotebookText, RefreshCcw, Route, Target } from "lucide-react";
+import { BrainCircuit, CalendarDays, Clock, History, KeyRound, ListChecks, NotebookText, RefreshCcw, Route, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { commitLearningPlanDraft, generateLearningPlan, listLearningPlanDrafts } from "@/features/ai/data/ai-api";
-import type { LearningPlanDraft } from "@/features/ai/data/types";
+import { commitLearningPlanDraft, generateLearningPlan, listAIProviders, listLearningPlanDrafts } from "@/features/ai/data/ai-api";
+import type { AIProviderConfig, LearningPlanDraft } from "@/features/ai/data/types";
 import { DashboardEmptyState } from "@/features/dashboard/components/dashboard-empty-state";
 import { DashboardPanelMotion } from "@/features/dashboard/components/dashboard-motion";
 import { DashboardSection } from "@/features/dashboard/components/dashboard-section";
 import { DashboardStatusStrip } from "@/features/dashboard/components/dashboard-status-strip";
 import type { DashboardStore } from "@/features/dashboard/hooks/use-dashboard-store";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { copy } from "@/lib/i18n/copy";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
@@ -28,11 +29,6 @@ function parseStack(value: string) {
     });
 }
 
-function errorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  return "Planner request failed";
-}
-
 export function PlannerTab({ store }: { store: DashboardStore }) {
   const { locale } = useLocale();
   const t = copy[locale].dashboard.planner;
@@ -44,11 +40,16 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
   const [constraints, setConstraints] = useState("");
   const [draft, setDraft] = useState<LearningPlanDraft | undefined>();
   const [draftHistory, setDraftHistory] = useState<LearningPlanDraft[]>([]);
+  const [providers, setProviders] = useState<AIProviderConfig[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(true);
+  const [providerIssue, setProviderIssue] = useState("");
   const [historyLoading, setHistoryLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const readyProvider = providers.find((provider) => provider.isDefault && provider.enabled && provider.hasApiKey);
+  const canGenerate = Boolean(readyProvider) && !providersLoading && !loading;
 
   useEffect(() => {
     let cancelled = false;
@@ -57,10 +58,29 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
         if (!cancelled) setDraftHistory(drafts);
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setError(errorMessage(requestError));
+        if (!cancelled) setError(getApiErrorMessage(requestError, "Planner request failed"));
       })
       .finally(() => {
         if (!cancelled) setHistoryLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void listAIProviders()
+      .then((loadedProviders) => {
+        if (cancelled) return;
+        setProviders(loadedProviders);
+        setProviderIssue("");
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) setProviderIssue(getApiErrorMessage(requestError, "AI provider request failed"));
+      })
+      .finally(() => {
+        if (!cancelled) setProvidersLoading(false);
       });
     return () => {
       cancelled = true;
@@ -72,7 +92,7 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
     try {
       setDraftHistory(await listLearningPlanDrafts());
     } catch (requestError) {
-      setError(errorMessage(requestError));
+      setError(getApiErrorMessage(requestError, "Planner request failed"));
     } finally {
       setHistoryLoading(false);
     }
@@ -82,6 +102,10 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
     event.preventDefault();
     if (!target.trim() || !currentLevel.trim()) {
       setError(t.required);
+      return;
+    }
+    if (!readyProvider) {
+      setError(t.setupRequiredDetail);
       return;
     }
     setLoading(true);
@@ -99,7 +123,7 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
       setDraft(nextDraft);
       setDraftHistory((current) => [nextDraft, ...current.filter((item) => item.id !== nextDraft.id)]);
     } catch (requestError) {
-      setError(errorMessage(requestError));
+      setError(getApiErrorMessage(requestError, "Planner request failed"));
     } finally {
       setLoading(false);
     }
@@ -125,7 +149,7 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
           .replace("{notes}", String(result.notesCreated)),
       );
     } catch (requestError) {
-      setError(errorMessage(requestError));
+      setError(getApiErrorMessage(requestError, "Planner request failed"));
     } finally {
       setImporting(false);
     }
@@ -135,6 +159,22 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
     <div className="grid gap-5">
       <DashboardPanelMotion>
         <DashboardSection title={t.title} description={t.description} icon={BrainCircuit}>
+          {providersLoading ? <DashboardStatusStrip title={t.checkingProvider} variant="info" /> : null}
+          {!providersLoading && !readyProvider ? (
+            <DashboardStatusStrip
+              title={t.setupRequired}
+              detail={providerIssue || t.setupRequiredDetail}
+              variant="warning"
+              actionLabel={t.openModels}
+              onAction={() => store.setActiveTab("models")}
+            />
+          ) : null}
+          {readyProvider ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border bg-background/70 px-3 py-2 text-xs text-muted-foreground">
+              <KeyRound className="h-3.5 w-3.5 text-primary" />
+              {t.activeProvider}: {readyProvider.displayName} / {readyProvider.model}
+            </div>
+          ) : null}
           <form className="grid gap-4" onSubmit={handleSubmit}>
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <Input value={target} onChange={(event) => setTarget(event.target.value)} placeholder={t.targetPlaceholder} aria-label={t.target} />
@@ -147,10 +187,16 @@ export function PlannerTab({ store }: { store: DashboardStore }) {
             </div>
             <Textarea value={constraints} onChange={(event) => setConstraints(event.target.value)} placeholder={t.constraintsPlaceholder} aria-label={t.constraints} />
             <div className="flex flex-wrap items-center gap-3">
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={!canGenerate}>
                 <BrainCircuit className="h-4 w-4" />
                 {loading ? t.generating : t.generate}
               </Button>
+              {!readyProvider && !providersLoading ? (
+                <Button type="button" variant="outline" onClick={() => store.setActiveTab("models")}>
+                  <KeyRound className="h-4 w-4" />
+                  {t.openModels}
+                </Button>
+              ) : null}
               <p className="text-xs text-muted-foreground">{t.boundaryHint}</p>
             </div>
           </form>

@@ -26,6 +26,7 @@ import type {
   TodoInput,
   TodoPatch,
 } from "@/features/dashboard/types";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { applyTheme, type ThemePreference } from "@/lib/theme/theme-provider";
 
 function cleanTags(tags: string[]) {
@@ -59,7 +60,7 @@ function hasPatchKey(patch: object, key: PropertyKey) {
 }
 
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Dashboard data provider failed";
+  return getApiErrorMessage(error, "Dashboard data provider failed");
 }
 
 const EMPTY_DASHBOARD_SNAPSHOT = {
